@@ -18,6 +18,7 @@ from amazon_echo import (
     AuthorizeRequest,
     Credentials,
     build_authorize_url,
+    deregister_device,
     register_device,
 )
 from amazon_echo.auth import exchange_cookies, refresh_access_token, region_for_domain
@@ -350,3 +351,21 @@ async def test_auth_errors_never_echo_secrets(session, credentials):
     with pytest.raises(AmazonEchoAuthenticationError) as err:
         await exchange_cookies(session, credentials)
     assert "Atnr|refresh" not in str(err.value)
+
+
+async def test_deregister_device(session, credentials):
+    credentials.access_token = "Atna|live"
+    credentials.access_token_expires = 10**12
+    session.add("POST", "/auth/deregister", {"response": {"success": {}}})
+    await deregister_device(session, credentials)
+    call = session.calls[0]
+    assert call["json"] == {"requested_deregister_type": "deregister_device"}
+    assert call["headers"]["Authorization"] == "Bearer Atna|live"
+    assert credentials.access_token == ""
+
+
+async def test_deregister_refuses_shared_session(session, credentials):
+    credentials.source = "alexa_media"
+    with pytest.raises(AmazonEchoAuthenticationError, match="Shared"):
+        await deregister_device(session, credentials)
+    assert not session.calls

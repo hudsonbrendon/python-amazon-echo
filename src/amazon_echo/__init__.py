@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from .auth import AuthorizeRequest, Credentials, build_authorize_url, register_device
+from .auth import (
+    AuthorizeRequest,
+    Credentials,
+    build_authorize_url,
+    deregister_device,
+    register_device,
+)
 from .client import AmazonEchoClient
 from .exceptions import (
     AmazonEchoAuthenticationError,
@@ -30,7 +36,7 @@ from .models import (
 )
 from .push import PushClient, PushEvent
 
-__version__ = "0.3.4"
+__version__ = "0.3.5"
 
 __all__ = [
     "Account",
@@ -59,6 +65,7 @@ __all__ = [
     "Routine",
     "VoiceRecord",
     "build_authorize_url",
+    "deregister_device",
     "is_reachable",
     "probe_local",
     "register_device",

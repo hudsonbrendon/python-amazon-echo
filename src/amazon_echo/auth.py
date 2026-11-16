@@ -178,6 +178,7 @@ async def _post_auth(
     *,
     form: dict[str, str] | None = None,
     body: dict[str, Any] | None = None,
+    token: str | None = None,
 ) -> dict[str, Any]:
     """POST to api.amazon.com and return the decoded JSON answer."""
     headers = {
@@ -185,6 +186,8 @@ async def _post_auth(
         "Accept": "application/json",
         "x-amzn-identity-auth-domain": AUTH_HOST,
     }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     try:
         async with session.post(
             f"https://{AUTH_HOST}{path}",
@@ -287,6 +290,32 @@ async def exchange_cookies(
     if not fresh:
         raise AmazonEchoAuthenticationError("No cookies in the answer")
     credentials.cookies = {**credentials.cookies, **fresh}
+
+
+async def deregister_device(
+    session: aiohttp.ClientSession, credentials: Credentials
+) -> None:
+    """Remove this registration from the Amazon account ("Your devices").
+
+    The refresh token stops working afterwards. Sessions imported from
+    ``alexa_media`` belong to that integration and are refused here.
+
+    Raises:
+        AmazonEchoAuthenticationError: Amazon refused, or the session is shared.
+
+    """
+    if credentials.source == "alexa_media":
+        raise AmazonEchoAuthenticationError("Shared alexa_media session")
+    if not credentials.access_token or credentials.access_token_expires < time.time():
+        await refresh_access_token(session, credentials)
+    await _post_auth(
+        session,
+        "/auth/deregister",
+        body={"requested_deregister_type": "deregister_device"},
+        token=credentials.access_token,
+    )
+    credentials.access_token = ""
+    credentials.access_token_expires = 0.0
 
 
 async def register_device(

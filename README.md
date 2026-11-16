@@ -209,6 +209,7 @@ with mocked HTTP.
 | `async_get_access_token` (`auth/token`) | live (token refreshed) |
 | Cookie exchange on 401/403 (`auth/token`, `auth_cookies`) | ported — never triggered live |
 | `build_authorize_url`, `register_device` | ported (the authorize URL answers 302 as expected; no registration was made) |
+| `deregister_device` (`auth/deregister`) | ported from alexapy 1.35.0 `secureauth.async_deregister`; never sent, because it would end the only live registration. Refuses sessions imported from `alexa_media` |
 | `get_account`, `get_devices`, `get_routines`, `get_music_providers`, `get_service_urls` | live read |
 | `get_dnd`, `get_volumes`, `get_bluetooth`, `get_notifications`, `get_alarm_volumes`, `get_wake_words`, `get_ascending_alarms`, `get_endpoint_states` | live read |
 | `get_media` | verified live on 2026-11-16 with Spotify: playing, title, provider and position, then paused when the sleep timer ran out |
