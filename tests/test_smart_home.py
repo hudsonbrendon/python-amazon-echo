@@ -359,6 +359,84 @@ async def test_kids_mode_and_device_preferences(client, session, office):
     }
 
 
+async def test_amazon_kids(client, session, office):
+    parents = "https://parents.amazon.com.br"
+    session.add(
+        "GET",
+        "/ajax/get-household-with-age",
+        {
+            "members": [
+                {
+                    "role": "ADULT",
+                    "directedId": "amzn1.account.ADULT",
+                    "firstName": "A",
+                },
+                {
+                    "role": "CHILD",
+                    "directedId": "amzn1.account.KID1",
+                    "firstName": "Kid",
+                },
+                {"role": "CHILD", "directedId": "amzn1.account.KID2"},
+                {"role": "CHILD"},
+            ]
+        },
+        None,
+    )
+    assert await client.get_children() == {
+        "amzn1.account.KID1": "Kid",
+        "amzn1.account.KID2": "amzn1.account.KID2",
+    }
+    assert session.calls[0]["url"] == f"{parents}/ajax/get-household-with-age"
+    assert await client.get_children() == {}
+
+    session.add(
+        "GET",
+        "/ajax/get-oobe-device-data",
+        {"childDirectedId": "amzn1.account.KID1"},
+        {"childDirectedId": ""},
+    )
+    assert await client.get_kids_profile(office) == "amzn1.account.KID1"
+    assert session.calls[-1]["params"] == {
+        "deviceId": "G000TEST00000001",
+        "deviceTypeId": "A18O6U1UQFJ0XK",
+    }
+    assert await client.get_kids_profile(office) is None
+
+    # Assigning needs the dashboard's own CSRF token, set by its setup page.
+    start = "/oobe/brownie/start/A18O6U1UQFJ0XK/G000TEST00000001"
+    session.add(
+        "GET",
+        start,
+        FakeResponse(200, text="<html>", cookies={"ft-panda-csrf-token": "panda"}),
+    )
+    session.add("POST", "/ajax/assign-device-to-child", None)
+    await client.set_kids_mode(office, "amzn1.account.KID1")
+    call = session.calls[-1]
+    assert call["url"] == f"{parents}/ajax/assign-device-to-child"
+    assert call["json"] == {
+        "deviceId": "G000TEST00000001",
+        "deviceTypeId": "A18O6U1UQFJ0XK",
+        "childDirectedId": "amzn1.account.KID1",
+    }
+    assert call["headers"]["x-amzn-csrf"] == "panda"
+    assert call["headers"]["Referer"] == parents + start
+    assert call["headers"]["Origin"] == parents
+
+    session.add("POST", "/api/unassign-device-from-child", None)
+    await client.set_kids_mode(office, None)
+    assert session.calls[-1]["url"] == (
+        "https://alexa.amazon.com.br/api/unassign-device-from-child"
+        "/G000TEST00000001/A18O6U1UQFJ0XK"
+    )
+
+
+async def test_kids_dashboard_host_is_translated_in_germany(client, session, office):
+    client.credentials.domain = "amazon.de"
+    session.add("GET", "/ajax/get-household-with-age", {"members": []})
+    await client.get_children()
+    assert session.calls[0]["url"].startswith("https://eltern.amazon.de/")
+
+
 async def test_set_background_image(client, session, office):
     session.add("POST", "/api/background-image", None)
     await client.set_background_image(office, "https://example.com/photo.jpg")

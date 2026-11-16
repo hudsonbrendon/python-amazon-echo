@@ -79,6 +79,8 @@ _HISTORY_PAGES = 5
 # One GraphQL answer serves the Alexa devices and the smart-home endpoints.
 _ENDPOINTS_TTL = 5.0
 _BACKGROUND_IMAGE_ID = "JqIFZhtBTx25wLGTJGdNGQ"  # the app's "personal photo" slot
+# The Amazon Kids parent dashboard is parents.<domain>, except where translated.
+_PARENTS_SUBDOMAINS = {"amazon.de": "eltern"}
 _CSRF_META = re.compile(
     r'<meta[^>]*name="csrf-token"[^>]*content="([^"]+)"', re.IGNORECASE
 )
@@ -963,7 +965,35 @@ class AmazonEchoClient:
         )
         return bool((data or {}).get("isChildDirectedDevice"))
 
+    @property
+    def _parents_host(self) -> str:
+        """Host of the Amazon Kids parent dashboard of the marketplace."""
+        domain = self.credentials.domain
+        return f"{_PARENTS_SUBDOMAINS.get(domain, 'parents')}.{domain}"
+
+    async def get_kids_profile(self, device: Device) -> str | None:
+        """Return the id of the child ``device`` is assigned to, if any."""
+        data = await self._request(
+            "GET",
+            "/ajax/get-oobe-device-data",
+            host=self._parents_host,
+            params={"deviceId": device.serial, "deviceTypeId": device.device_type},
+        )
+        child: str | None = (data or {}).get("childDirectedId") or None
+        return child
+
     # ------------------------------------------------- account preferences
+
+    async def get_children(self) -> dict[str, str]:
+        """Return the child profiles of the household as id → first name."""
+        data = await self._request(
+            "GET", "/ajax/get-household-with-age", host=self._parents_host
+        )
+        return {
+            member["directedId"]: member.get("firstName") or member["directedId"]
+            for member in (data or {}).get("members") or []
+            if member.get("role") == "CHILD" and member.get("directedId")
+        }
 
     async def get_device_preferences(self) -> dict[str, dict[str, Any]]:
         """Return ``locale``, ``time_zone`` and ``temperature_scale`` by serial."""
@@ -1167,6 +1197,37 @@ class AmazonEchoClient:
         if mode not in DROP_IN_MODES:
             raise ValueError("mode must be all, home or off")
         await self._set_comms(device, "dropin", DROP_IN_MODES[mode])
+
+    async def set_kids_mode(self, device: Device, child_id: str | None) -> None:
+        """Put ``device`` in Amazon Kids mode for a child, or take it out (None).
+
+        ``child_id`` is a key of :meth:`get_children`.
+        """
+        if child_id is None:
+            await self._request(
+                "POST",
+                f"/api/unassign-device-from-child/{device.serial}/{device.device_type}",
+            )
+            return
+        host = self._parents_host
+        start = f"/oobe/brownie/start/{device.device_type}/{device.serial}"
+        # The dashboard has a CSRF token of its own, set by its setup page.
+        await self._request("GET", start, host=host, text=True)
+        await self._request(
+            "POST",
+            "/ajax/assign-device-to-child",
+            host=host,
+            json={
+                "deviceId": device.serial,
+                "deviceTypeId": device.device_type,
+                "childDirectedId": child_id,
+            },
+            headers={
+                "Referer": f"https://{host}{start}",
+                "Origin": f"https://{host}",
+                "x-amzn-csrf": self.credentials.cookies.get("ft-panda-csrf-token", ""),
+            },
+        )
 
     async def set_background_image(self, device: Device, url: str) -> None:
         """Show the image at ``url`` (https) as the background of an Echo Show."""
