@@ -130,6 +130,27 @@ if lamp.supports("brightness", "setBrightness"):
 Amazon cannot read it. `get_endpoint_states()` and `get_smart_home_endpoints()`
 share one request when called within 5 seconds.
 
+Routines (create, edit, delete; not possible in alexapy or aioamazondevices):
+
+```python
+from amazon_echo.routines import smart_home_action, speak_action
+
+routine = await client.create_routine(
+    "Modo leitura",
+    [smart_home_action(lamp.id, {"type": "setBrightness", "brightness": 40}),
+     speak_action("Boa leitura")],
+    phrases=["modo leitura"],
+)
+# a lamp was replaced: move every action of the old one to the new one
+await client.update_routine(routine.id, replace_targets={old_lamp_id: lamp.id})
+await client.update_routine(routine.id, enabled=False)
+await client.delete_routine(routine.id)
+```
+
+`amazon_echo.routines.routine_targets(definition["sequence"])` lists the
+devices a routine acts on, which is how routines that point at removed devices
+are found.
+
 LAN:
 
 ```python
@@ -223,6 +244,7 @@ with mocked HTTP.
 | `create_alarm` | music alarm verified live on 2026-11-16 (`music=`, reusing a Spotify music alarm made by voice): created on an Echo Plus with the requested date and time, then deleted. A plain alarm is ported, not replayed live |
 | `create_alarm(music=…)` (music alarm that reuses the station of an existing one) | ported from Alexa Media Player's request, never sent |
 | `play_music(timer=…)` (stop after that many seconds) | verified live on 2026-11-16 (Spotify): the music stopped by itself, though not at the exact second (25 s asked → stopped at 26 s; 20 s asked → about 38 s) |
+| `create_routine`, `update_routine`, `delete_routine`, `get_routine_definition` | verified live on 2026-11-16: a throwaway routine (voice trigger only) was created, renamed, given new phrases, disabled, moved to another lamp and deleted; then `update_routine(replace_targets=…)` repaired seven real routines whose lamps had been replaced. The body format (`triggerJson`/`sequenceJson` strings, trigger `payload` as a string again) comes from the Alexa app's bytecode; the object `GET` returns is refused (`400`/`500`) |
 | `create_timer` | verified live on an Echo Plus (pt-BR): a 12-minute timer, with and without a name, created and deleted. It is a typed request with the duration in words; English phrases are unit-tested only |
 | `set_wake_word` | ported |
 | `speak`, `announce`, `text_command`, `play_sound`, `play_music`, `info_skill`, `set_volume` | verified live on 2026-11-16 on an Echo Plus, through Home Assistant; the voice history shows each request and Alexa's answer |

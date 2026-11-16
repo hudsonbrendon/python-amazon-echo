@@ -15,6 +15,7 @@ from urllib.parse import quote, urlsplit
 
 import aiohttp
 
+from . import routines
 from .auth import (
     Credentials,
     exchange_cookies,
@@ -1614,6 +1615,131 @@ class AmazonEchoClient:
                 },
             )
         await self._run(copy.deepcopy(start))
+
+    # ------------------------------------------------------ routine editing
+
+    async def get_routine_definition(self, routine_id: str) -> dict[str, Any]:
+        """Return a routine as the editor reads it (triggers, sequence, status)."""
+        data = await self._request("GET", f"/api/behaviors/automations/{routine_id}")
+        if not isinstance(data, dict):
+            raise AmazonEchoResponseError(200, f"Routine {routine_id} unreadable")
+        return data
+
+    @staticmethod
+    def _routine_from(data: Any) -> Routine:
+        if not isinstance(data, dict) or not data.get("automationId"):
+            raise AmazonEchoResponseError(200, "No routine in the answer")
+        return Routine(
+            id=data["automationId"],
+            name=data.get("name") or data["automationId"],
+            enabled=data.get("status") == "ENABLED",
+            raw=data,
+        )
+
+    async def create_routine(
+        self,
+        name: str,
+        actions: list[dict[str, Any]],
+        *,
+        phrases: list[str] | None = None,
+        triggers: list[dict[str, Any]] | None = None,
+        enabled: bool = True,
+    ) -> Routine:
+        """Create a routine.
+
+        Args:
+            name: Name shown in the Alexa app.
+            actions: Actions in order (see :mod:`amazon_echo.routines`:
+                ``smart_home_action``, ``speak_action``) or one full sequence.
+            phrases: "When you say" phrases (the usual trigger).
+            triggers: Raw triggers, for other kinds (schedule, sensor…).
+            enabled: Whether the routine starts enabled.
+
+        """
+        customer_id, locale = await self._customer()
+        if phrases:
+            account = await self.get_account()
+            triggers = [
+                *(triggers or []),
+                routines.utterance_trigger(
+                    phrases,
+                    customer_id=customer_id,
+                    locale=locale,
+                    marketplace_id=account.marketplace_id,
+                ),
+            ]
+        if not triggers:
+            raise AmazonEchoNotSupportedError("A routine needs a trigger")
+        body = routines.request_body(
+            name=name,
+            triggers=triggers,
+            sequence=routines.fill_customer(
+                routines.build_sequence(actions), customer_id, locale
+            ),
+            enabled=enabled,
+        )
+        return self._routine_from(
+            await self._request("POST", "/api/behaviors/automations", json=body)
+        )
+
+    async def update_routine(
+        self,
+        routine_id: str,
+        *,
+        name: str | None = None,
+        actions: list[dict[str, Any]] | None = None,
+        phrases: list[str] | None = None,
+        enabled: bool | None = None,
+        replace_targets: dict[str, str] | None = None,
+    ) -> Routine:
+        """Change a routine; whatever is not given stays as it is.
+
+        Args:
+            routine_id: The routine's ``automationId``.
+            name: New name.
+            actions: New actions (replace all of them).
+            phrases: New "when you say" phrases (replace those of the
+                first voice trigger).
+            enabled: Enable or disable.
+            replace_targets: Old → new smart-home device (endpoint ids or
+                their UUIDs), e.g. to repair a routine after a lamp was
+                replaced.
+
+        """
+        current = await self.get_routine_definition(routine_id)
+        customer_id, locale = await self._customer()
+        sequence = current.get("sequence") or {}
+        if actions is not None:
+            sequence = routines.fill_customer(
+                routines.build_sequence(actions), customer_id, locale
+            )
+        if replace_targets:
+            sequence = routines.replace_targets(sequence, replace_targets)
+        triggers = copy.deepcopy(current.get("triggers") or [])
+        if phrases:
+            voice = next(
+                (t for t in triggers if t.get("type") == "CustomUtterance"), None
+            )
+            if voice is None:
+                raise AmazonEchoNotSupportedError("The routine has no voice trigger")
+            voice["payload"]["utterance"] = phrases[0]
+            voice["payload"]["utterances"] = phrases
+        body = routines.request_body(
+            name=name if name is not None else current.get("name") or "",
+            triggers=triggers,
+            sequence=sequence,
+            enabled=current.get("status") == "ENABLED" if enabled is None else enabled,
+            routine_id=routine_id,
+        )
+        return self._routine_from(
+            await self._request(
+                "PUT", f"/api/behaviors/automations/{routine_id}", json=body
+            )
+        )
+
+    async def delete_routine(self, routine_id: str) -> None:
+        """Delete a routine."""
+        await self._request("DELETE", f"/api/behaviors/automations/{routine_id}")
 
     # ------------------------------------------ alarms / timers / reminders
 
