@@ -226,7 +226,7 @@ with mocked HTTP.
 | `set_wake_word` | ported |
 | `speak`, `announce`, `text_command`, `play_sound`, `play_music`, `info_skill`, `set_volume` | verified live on 2026-11-16 on an Echo Plus, through Home Assistant; the voice history shows each request and Alexa's answer |
 | `launch_skill`, `run_routine`, `stop`, `send_drop_in_notification` | ported, not replayed live |
-| `send_mobile_push` | sent live three times on 2026-11-16 (with and without the device fields, the second identical to Alexa Media Player's request); Amazon accepted all three but none reached the owner's phone. The phone's Alexa app registration lists no enabled notification types, so the cause is most likely on the phone; not proven |
+| `send_mobile_push` | verified live on 2026-11-16: delivered to the owner's phone once the Alexa app was allowed to show notifications. Before that Amazon accepted every request and nothing arrived, and the app's registration listed no notification types — check that first if a notification does not show up |
 | `media_command`, `bluetooth_connect`, `bluetooth_disconnect`, `reboot` | ported |
 | `get_lists`, `get_list_items` | live read |
 | `add_list_item`, `update_list_item`, `delete_list_item` | ported |
