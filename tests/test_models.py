@@ -7,7 +7,7 @@ from amazon_echo import Device, Notification, PushEvent
 
 
 def test_public_api():
-    assert amazon_echo.__version__ == "0.3.1"
+    assert amazon_echo.__version__ == "0.3.2"
     for name in amazon_echo.__all__:
         assert hasattr(amazon_echo, name)
     assert issubclass(

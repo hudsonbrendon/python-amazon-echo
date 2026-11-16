@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Final
 
-VERSION: Final = "0.3.1"
+VERSION: Final = "0.3.2"
 
 # Identity of the Alexa iOS app, which is what a registration impersonates.
 APP_NAME: Final = "Amazon Echo for Home Assistant"

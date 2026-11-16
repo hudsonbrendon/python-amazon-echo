@@ -1641,3 +1641,29 @@ async def test_cookie_refresh_works_right_after_boot(client, session, monkeypatc
     session.add("POST", "/auth/token", COOKIE_ANSWER)
     assert await client.request("GET", "/api/x") == {"ok": 1}
     assert len(session.sent("/auth/token")) == 1
+
+
+def test_music_alarm_time_comes_from_the_original_fields():
+    item = {
+        "id": "A18O6U1UQFJ0XK-G000TEST00000001-music",
+        "type": "MusicAlarm",
+        "status": "ON",
+        "deviceSerialNumber": "G000TEST00000001",
+        "deviceType": "A18O6U1UQFJ0XK",
+        "alarmTime": 0,
+        "triggerTime": 0,
+        "originalDate": "2030-12-06",
+        "originalTime": "06:10:00.000",
+        "musicAlarmId": "fake-music-alarm",
+        "provider": "Spotify",
+        "musicEntity": "fake station",
+    }
+    alarm = parse_notification(item)
+    assert alarm.kind == "music_alarm"
+    assert alarm.when == datetime(2030, 12, 6, 6, 10).astimezone()
+    assert parse_notification({**item, "originalDate": None}).when is None
+    repeating = parse_notification(
+        {**item, "originalDate": "2020-01-01", "recurringPattern": "P1D"}
+    )
+    assert repeating.when is not None
+    assert repeating.when > datetime.now().astimezone()

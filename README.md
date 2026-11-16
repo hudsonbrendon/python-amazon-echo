@@ -219,7 +219,7 @@ with mocked HTTP.
 | `set_aux_direction` | no-op write accepted; the body field name is unconfirmed |
 | `set_volume` (sequence pipeline) | no-op write |
 | `create_reminder`, `delete_notification` | live (a reminder 320 days ahead was created and deleted) |
-| `create_alarm` | ported |
+| `create_alarm` | verified live: a plain alarm earlier, and on 2026-11-16 a music alarm (`music=`, reusing a Spotify music alarm made by voice) created on an Echo Plus and deleted |
 | `create_alarm(music=…)` (music alarm that reuses the station of an existing one) | ported from Alexa Media Player's request, never sent |
 | `play_music(timer=…)` (stop after that many seconds) | ported from Alexa Media Player's payload, never sent |
 | `create_timer` | verified live on an Echo Plus (pt-BR): a 12-minute timer, with and without a name, created and deleted. It is a typed request with the duration in words; English phrases are unit-tested only |

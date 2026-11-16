@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-11-16
+
+### Fixed
+
+- Music alarms had no time (`when` was `None`): Amazon sends `alarmTime: 0` for
+  them, so the time now comes from `originalDate` + `originalTime`. Found live.
+
 ## [0.3.1] - 2026-11-16
 
 ### Fixed

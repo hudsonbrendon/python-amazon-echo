@@ -127,6 +127,26 @@ def _local(when: datetime) -> datetime:
     return when.astimezone().replace(tzinfo=None) if when.tzinfo else when
 
 
+def _from_original(item: dict[str, Any]) -> datetime | None:
+    """Local ``originalDate`` + ``originalTime`` (music alarms carry only these).
+
+    Same time zone assumption as :func:`_local`; a repeating alarm whose first
+    date is past moves to its next ring.
+    """
+    date, clock = item.get("originalDate"), item.get("originalTime")
+    if not date or not clock:
+        return None
+    try:
+        when = datetime.fromisoformat(f"{date}T{str(clock)[:8]}").astimezone()
+        if item.get("recurringPattern") and when < datetime.now().astimezone():
+            # _next_ring works on local wall-clock time
+            ring = _next_ring(item, datetime.now())  # noqa: DTZ005
+            when = datetime.fromisoformat(ring).astimezone()
+    except ValueError:
+        return None
+    return when
+
+
 def parse_notification(item: dict[str, Any]) -> Notification:
     """Build a :class:`Notification` from an ``/api/notifications`` item."""
     kind = NOTIFICATION_KINDS.get(item.get("type") or "", "")
@@ -134,7 +154,11 @@ def parse_notification(item: dict[str, Any]) -> Notification:
     if item.get("musicAlarmId") and kind == "alarm":
         kind = "music_alarm"
     remaining = item.get("remainingTime") or 0
-    when = _from_ms(item.get("triggerTime")) or _from_ms(item.get("alarmTime"))
+    when = (
+        _from_ms(item.get("triggerTime"))
+        or _from_ms(item.get("alarmTime"))
+        or (_from_original(item) if kind in ("alarm", "music_alarm") else None)
+    )
     return Notification(
         id=item["id"],
         kind=kind,
