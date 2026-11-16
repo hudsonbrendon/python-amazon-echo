@@ -1555,3 +1555,12 @@ async def test_call_feature_rejected(client, session):
         await client.call_feature("e1", "power", "turnOn")
     with pytest.raises(AmazonEchoResponseError, match="No response"):
         await client.call_feature("e1", "power", "turnOn")
+
+
+async def test_cookie_refresh_works_right_after_boot(client, session, monkeypatch):
+    """A low monotonic clock (fresh boot) must not look like a recent refresh."""
+    monkeypatch.setattr("amazon_echo.client.time.monotonic", lambda: 5.0)
+    session.add("GET", "/api/x", FakeResponse(401), {"ok": 1})
+    session.add("POST", "/auth/token", COOKIE_ANSWER)
+    assert await client.request("GET", "/api/x") == {"ok": 1}
+    assert len(session.sent("/auth/token")) == 1

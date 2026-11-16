@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-11-16
+
+### Fixed
+
+- A 401/403 within 60 s of system boot was treated as "rejected right after a
+  cookie refresh", because the cooldown started from `time.monotonic() == 0`.
+  Found by CI on a freshly booted runner.
+
 ## [0.1.0] - 2026-11-15
 
 ### Added

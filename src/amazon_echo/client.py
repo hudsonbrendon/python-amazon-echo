@@ -274,7 +274,8 @@ class AmazonEchoClient:
         self._on_update = on_credentials_update
         self._auth_lock = asyncio.Lock()
         self._generation = 0
-        self._last_exchange = 0.0
+        # -inf, not 0: time.monotonic() can be below the cooldown right after boot
+        self._last_exchange = float("-inf")
         self._locale: str | None = None
         self._devices: dict[str, Device] = {}
         self._service_urls: dict[str, str] | None = None
