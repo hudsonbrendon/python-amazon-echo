@@ -222,7 +222,7 @@ with mocked HTTP.
 | `create_alarm` | ported |
 | `create_alarm(music=…)` (music alarm that reuses the station of an existing one) | ported from Alexa Media Player's request, never sent |
 | `play_music(timer=…)` (stop after that many seconds) | ported from Alexa Media Player's payload, never sent |
-| `create_timer` | ported — body inferred from field names in the app, never sent |
+| `create_timer` | verified live on an Echo Plus (pt-BR): a 12-minute timer, with and without a name, created and deleted. It is a typed request with the duration in words; English phrases are unit-tested only |
 | `set_wake_word` | ported |
 | `speak`, `announce`, `text_command`, `play_sound`, `play_music`, `launch_skill`, `run_routine`, `stop` | ported |
 | `media_command`, `bluetooth_connect`, `bluetooth_disconnect`, `reboot` | ported |
@@ -270,8 +270,11 @@ with mocked HTTP.
 - **Music alarms** can only reuse a station: `create_alarm(music=…)` takes a
   music alarm that already exists on the account (create one in the Alexa app
   first) and wakes with the same station. Amazon has no public search for one.
-- **`create_timer` is unverified** (see the table). Use
-  `text_command(device, "set a timer for 5 minutes")` if it is rejected.
+- **`create_timer`** speaks: Alexa has no API to start a timer on an Echo (the
+  app's timers API starts it on the app's own registration, which was observed
+  live), so the request is typed with the duration in words and Alexa confirms
+  it out loud. Portuguese and English only; other languages raise
+  `AmazonEchoNotSupportedError`.
 - **Voice history** comes 10 records per call; at most 50 are fetched.
 - **Lists** return the first 100 items.
 - **`get_notifications`** is a large, rate-limited answer; call it sparingly (push

@@ -22,6 +22,7 @@ from amazon_echo import (
     Routine,
 )
 from amazon_echo.client import _recurrence_rule, format_mac, parse_notification
+from amazon_echo.phrases import timer_request
 
 from .conftest import FakeResponse, load_json
 
@@ -1300,7 +1301,8 @@ async def test_alerts_api_missing(client, session, office):
         await client.create_alarm(office, datetime(2027, 1, 15, 7, 0))
 
 
-async def test_create_timer(client, session, office):
+async def test_create_timer(client, session, office, monkeypatch):
+    monkeypatch.setattr("amazon_echo.client._TIMER_POLL_SECONDS", 0)
     new = {
         "id": "A18O6U1UQFJ0XK-G000TEST00000001-timer",
         "type": "Timer",
@@ -1310,17 +1312,59 @@ async def test_create_timer(client, session, office):
         "remainingTime": 300_000,
         "createdDate": 1_800_000_000_000,
     }
-    session.add("GET", "/api/notifications", _listing(), _listing(new))
-    session.add("GET", "/api/endpoints", {"alexaApiUrl": "https://api.amazonalexa.com"})
-    session.add("POST", "/v1/alerts/timers", None)
-    timer = await client.create_timer(office, timedelta(minutes=5), label="tea")
-    body = session.sent("/v1/alerts/timers")[0]["json"]
-    assert body["duration"] == "PT300S"
-    assert body["timerLabel"] == "tea"
-    assert body["endpointId"] == "G000TEST00000001@A18O6U1UQFJ0XK"
+    # before, first poll (not there yet), second poll
+    session.add("GET", "/api/notifications", _listing(), _listing(), _listing(new))
+    session.add("POST", "/api/behaviors/preview", None)
+    timer = await client.create_timer(
+        office, timedelta(minutes=5), label="tea", locale="en-US"
+    )
+    node = node_of(session)
+    assert node["type"] == "Alexa.TextCommand"
+    assert node["operationPayload"]["text"] == "set a tea timer for five minutes"
     assert timer.remaining == timedelta(minutes=5)
-    with pytest.raises(ValueError, match="positive"):
-        await client.create_timer(office, timedelta(0))
+    with pytest.raises(ValueError, match="between"):
+        await client.create_timer(office, timedelta(0), locale="en-US")
+    with pytest.raises(AmazonEchoNotSupportedError):
+        await client.create_timer(office, timedelta(minutes=1), locale="ja-JP")
+
+
+async def test_create_timer_never_shows_up(client, session, office, monkeypatch):
+    monkeypatch.setattr("amazon_echo.client._TIMER_POLL_SECONDS", 0)
+    monkeypatch.setattr("amazon_echo.client._TIMER_POLLS", 2)
+    session.add("GET", "/api/notifications", _listing())
+    session.add("POST", "/api/behaviors/preview", None)
+    with pytest.raises(AmazonEchoResponseError, match="did not show up"):
+        await client.create_timer(office, timedelta(minutes=5), locale="pt-BR")
+
+
+@pytest.mark.parametrize(
+    ("duration", "language", "label", "expected"),
+    [
+        (timedelta(minutes=10), "pt-BR", None, "timer de dez minutos"),
+        (timedelta(hours=1), "pt-BR", None, "timer de uma hora"),
+        (
+            timedelta(hours=2, minutes=21, seconds=1),
+            "pt-BR",
+            None,
+            "timer de duas horas e vinte e um minutos e um segundo",
+        ),
+        (
+            timedelta(minutes=12),
+            "pt-BR",
+            "pizza",
+            "timer de doze minutos chamado pizza",
+        ),
+        (timedelta(minutes=45), "en-US", None, "set a timer for forty-five minutes"),
+        (
+            timedelta(hours=1, seconds=30),
+            "en-GB",
+            None,
+            "set a timer for one hour and thirty seconds",
+        ),
+    ],
+)
+def test_timer_request(duration, language, label, expected):
+    assert timer_request(duration, language, label=label) == expected
 
 
 async def test_delete_notification(client, session):

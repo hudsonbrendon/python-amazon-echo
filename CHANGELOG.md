@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-11-16
+
+### Fixed
+
+- `create_timer` started the timer on the app's own registration instead of the
+  Echo (the app's timers API has no target device). It is now a typed request
+  with the duration in words, verified live in Portuguese; `locale` argument
+  added. Portuguese and English only.
+
 ## [0.3.0] - 2026-11-16
 
 ### Added

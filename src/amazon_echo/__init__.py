@@ -30,7 +30,7 @@ from .models import (
 )
 from .push import PushClient, PushEvent
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = [
     "Account",

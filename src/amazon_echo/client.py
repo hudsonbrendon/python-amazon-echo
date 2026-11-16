@@ -67,11 +67,14 @@ from .models import (
     Routine,
     VoiceRecord,
 )
+from .phrases import timer_request
 
 _LOGGER = logging.getLogger(__name__)
 
 _TIMEOUT = aiohttp.ClientTimeout(total=30)
 _RETRY_DELAYS = (1.0, 3.0)  # back-off before the 2nd and 3rd attempt on 429/503
+_TIMER_POLLS = 8
+_TIMER_POLL_SECONDS = 3.0
 _REAUTH_COOLDOWN = 60.0  # a 401/403 this soon after a cookie exchange is final
 _TOKEN_MARGIN = 60.0
 _HISTORY_CSRF_TTL = 12 * 3600
@@ -1676,30 +1679,45 @@ class AmazonEchoClient:
         raise AmazonEchoResponseError(200, "No reminder in the answer")
 
     async def create_timer(
-        self, device: Device, duration: timedelta, *, label: str | None = None
+        self,
+        device: Device,
+        duration: timedelta,
+        *,
+        label: str | None = None,
+        locale: str | None = None,
     ) -> Notification:
-        """Start a timer on ``device``.
+        """Start a timer on ``device``; Alexa confirms it out loud.
 
-        The request body follows the field names found in the Alexa app
-        (``/v1/alerts/timers``); it has not been replayed against Amazon.
+        Amazon has no API for this: the timers API of the app starts the timer
+        on the app's own registration, not on an Echo. What works is a typed
+        request with the duration in words (see :mod:`amazon_echo.phrases`),
+        available for Portuguese and English.
+
+        Args:
+            device: The Echo that will run the timer.
+            duration: More than zero and less than 24 hours.
+            label: Optional name of the timer.
+            locale: Locale of the device; read from Amazon when omitted.
+
+        Raises:
+            AmazonEchoNotSupportedError: No phrase for the device's language.
+            AmazonEchoResponseError: Alexa did not start the timer.
+            ValueError: The duration is out of range.
+
         """
-        seconds = int(duration.total_seconds())
-        if seconds <= 0:
-            raise ValueError("The timer duration must be positive")
+        if locale is None:
+            preferences = await self.get_device_preferences()
+            locale = (preferences.get(device.serial) or {}).get("locale") or "en-US"
+        request = timer_request(duration, locale, label=label)
         known = {item.id for item in await self.get_notifications()}
-        body: dict[str, Any] = {
-            "duration": f"PT{seconds}S",
-            "creationBehavior": {"displayExperience": {"visibility": "VISIBLE"}},
-            "triggeringBehavior": {
-                "operation": {"type": "NOTIFY_ONLY"},
-                "notificationConfig": {"playAudible": True},
-            },
-            "endpointId": f"{device.serial}@{device.device_type}",
-        }
-        if label:
-            body["timerLabel"] = label
-        await self._alerts("POST", "timers", body)
-        return await self._find_new(device, "timer", known)
+        await self.text_command(device, request)
+        for _ in range(_TIMER_POLLS):
+            await asyncio.sleep(_TIMER_POLL_SECONDS)
+            try:
+                return await self._find_new(device, "timer", known)
+            except AmazonEchoResponseError:
+                continue
+        raise AmazonEchoResponseError(200, "The new timer did not show up")
 
     @staticmethod
     def _alarm_index(alarm: Notification) -> str:
