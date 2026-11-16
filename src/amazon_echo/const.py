@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Final
 
-VERSION: Final = "0.1.1"
+VERSION: Final = "0.2.0"
 
 # Identity of the Alexa iOS app, which is what a registration impersonates.
 APP_NAME: Final = "Amazon Echo for Home Assistant"
@@ -28,6 +28,8 @@ AUTH_HOST: Final = "api.amazon.com"
 AVS_HOST: Final = "api.amazonalexa.com"
 PUSH_HOST: Final = "bob-dispatch-prod-{region}.amazon.com"
 PUSH_VERSION: Final = "v20160207"
+# Communications service; every marketplace has an alias of the same host.
+COMMS_HOST: Final = "alexa-comms-mobile-service.{domain}"
 
 # Retail domains whose accounts live outside the EU push region.
 REGION_BY_DOMAIN: Final[dict[str, str]] = {
@@ -64,6 +66,48 @@ MEDIA_COMMANDS: Final[dict[str, str]] = {
     "shuffle": "ShuffleCommand",
     "repeat": "RepeatCommand",
 }
+
+# "Tell me…" routines actions: name → behavior node type.
+INFO_SKILLS: Final[dict[str, str]] = {
+    "calendar_today": "Alexa.Calendar.PlayToday",
+    "calendar_tomorrow": "Alexa.Calendar.PlayTomorrow",
+    "calendar_next": "Alexa.Calendar.PlayNext",
+    "date": "Alexa.Date.Play",
+    "time": "Alexa.Time.Play",
+    "national_news": "Alexa.News.NationalNews",
+    "flash_briefing": "Alexa.FlashBriefing.Play",
+    "traffic": "Alexa.Traffic.Play",
+    "weather": "Alexa.Weather.Play",
+    "clean_up": "Alexa.CleanUp.Play",
+    "good_morning": "Alexa.GoodMorning.Play",
+    "sing_a_song": "Alexa.SingASong.Play",
+    "fun_fact": "Alexa.FunFact.Play",
+    "joke": "Alexa.Joke.Play",
+    "tell_story": "Alexa.TellStory.Play",
+    "im_home": "Alexa.ImHome.Play",
+    "good_night": "Alexa.GoodNight.Play",
+}
+
+DROP_IN_MODES: Final[dict[str, str]] = {"all": "All", "home": "Home", "off": "Off"}
+
+# GraphQL feature instances with a fixed meaning.
+AMBIENT_MODE_INSTANCE: Final = "FTV.AmbientMode"
+REMOTE_BATTERY_INSTANCE: Final = "Remote.Battery"
+# The Amazon Air Quality Monitor reports its readings as numbered ranges.
+AQM_DEVICE_TYPE: Final = "AEZME1X38KDRA"
+AQM_LED_INSTANCE: Final = "11"
+AQM_RANGES: Final[dict[str, str]] = {
+    "4": "humidity",
+    "5": "voc",
+    "6": "pm25",
+    "7": "pm10",
+    "8": "co",
+    "9": "air_quality",
+}
+
+GUARD_MODEL: Final = "REDROCK_GUARD_PANEL"
+GUARD_SKILL_ID: Final = "amzn1.ask.skill.f71a9b50-e99a-4669-a226-d50ebb5e0830"
+GUARD_CAPABILITY: Final = "GUARD_EARCON"
 
 # What the Alexa app declares to AVS (PUT /v1/devices/@self/capabilities).
 # Without `Alexa.Mobile.Push` the HTTP/2 channel stays silent.
@@ -223,6 +267,7 @@ query echoEndpoints {
     endpoints {
       endpointId: id
       friendlyNameObject { value { text } }
+      manufacturer { value { text } }
       model { value { text } }
       displayCategories { primary { value } }
       dmsIdentifier { deviceType dsn }
@@ -231,6 +276,7 @@ query echoEndpoints {
       features {
         name
         instance
+        operations { name }
         properties {
           name
           type
@@ -241,9 +287,36 @@ query echoEndpoints {
           ... on ToggleState { toggleStateValue }
           ... on Volume { vol: value { value } }
           ... on Reachability { reachabilityStatusValue }
+          ... on Illuminance { illuminanceValue { value } }
+          ... on DetectionState { detectionStateValue }
+          ... on RelativeHumidity { relativeHumidityValue { value } }
+          ... on RangeValue { rangeValue { value } }
+          ... on Power { powerStateValue }
+          ... on Brightness { brightnessStateValue }
+          ... on Color { colorStateValue { hue saturation brightness } }
+          ... on ColorTemperature { colorTemperatureInKelvinStateValue }
+          ... on Lock { lockState }
+          ... on Mode { modeValue { value } }
+        }
+        configuration {
+          ... on ModeConfiguration {
+            modeOptions {
+              value
+              modeResources { friendlyName { value { text } } }
+            }
+          }
         }
       }
     }
+  }
+}
+"""
+
+# The Alexa Guard panel only shows up in the legacy appliance list.
+QUERY_APPLIANCES: Final = """
+query echoAppliances {
+  endpoints(endpointsQueryParams: {paginationParams: {disablePagination: true}}) {
+    items { legacyAppliance { applianceId modelName entityId } }
   }
 }
 """

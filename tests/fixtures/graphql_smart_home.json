@@ -1,0 +1,995 @@
+{
+  "data": {
+    "listEndpoints": {
+      "endpoints": [
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000101",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Office Show"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Amazon"
+            }
+          },
+          "model": {
+            "value": {
+              "text": "Echo Show 5"
+            }
+          },
+          "displayCategories": {
+            "primary": {
+              "value": "ALEXA_VOICE_ENABLED"
+            }
+          },
+          "dmsIdentifier": {
+            "deviceType": "A4ZP7ZC4PI6TO",
+            "dsn": "G000TEST00000004"
+          },
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "lightSensor",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "illuminance",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Illuminance",
+                  "illuminanceValue": {
+                    "value": 120.5
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "motionSensor",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "detectionState",
+                  "type": "RETRIEVABLE",
+                  "__typename": "DetectionState",
+                  "detectionStateValue": "DETECTED"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "humiditySensor",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "relativeHumidity",
+                  "type": "RETRIEVABLE",
+                  "__typename": "RelativeHumidity",
+                  "relativeHumidityValue": {
+                    "value": 55.0
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "temperatureSensor",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "temperature",
+                  "type": "RETRIEVABLE",
+                  "__typename": "TemperatureSensor",
+                  "temp": {
+                    "value": -280,
+                    "scale": "CELSIUS"
+                  }
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000102",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Air Monitor"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Amazon"
+            }
+          },
+          "model": {
+            "value": {
+              "text": "Air Quality Monitor"
+            }
+          },
+          "displayCategories": {
+            "primary": {
+              "value": "AIR_QUALITY_MONITOR"
+            }
+          },
+          "dmsIdentifier": {
+            "deviceType": "AEZME1X38KDRA",
+            "dsn": "G000TEST00000005"
+          },
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "temperatureSensor",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "temperature",
+                  "type": "RETRIEVABLE",
+                  "__typename": "TemperatureSensor",
+                  "temp": {
+                    "value": 22.5,
+                    "scale": "CELSIUS"
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "range",
+              "instance": "4",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "type": "RETRIEVABLE",
+                  "__typename": "RangeValue",
+                  "rangeValue": {
+                    "value": 48.0
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "range",
+              "instance": "5",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "type": "RETRIEVABLE",
+                  "__typename": "RangeValue",
+                  "rangeValue": {
+                    "value": 2.0
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "range",
+              "instance": "6",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "type": "RETRIEVABLE",
+                  "__typename": "RangeValue",
+                  "rangeValue": {
+                    "value": 7.0
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "range",
+              "instance": "7",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "type": "RETRIEVABLE",
+                  "__typename": "RangeValue",
+                  "rangeValue": {
+                    "value": 9.0
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "range",
+              "instance": "8",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "type": "RETRIEVABLE",
+                  "__typename": "RangeValue",
+                  "rangeValue": {
+                    "value": 0.0
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "range",
+              "instance": "9",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "type": "RETRIEVABLE",
+                  "__typename": "RangeValue",
+                  "rangeValue": {
+                    "value": 87.0
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "range",
+              "instance": "3",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "rangeValue",
+                  "type": "RETRIEVABLE",
+                  "__typename": "RangeValue",
+                  "rangeValue": {
+                    "value": 1.0
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "toggle",
+              "instance": "11",
+              "operations": [
+                {
+                  "name": "turnOn"
+                },
+                {
+                  "name": "turnOff"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "toggleState",
+                  "type": "RETRIEVABLE",
+                  "__typename": "ToggleState",
+                  "toggleStateValue": "ON"
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000103",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Glow"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Amazon"
+            }
+          },
+          "model": {
+            "value": {
+              "text": "Echo Glow"
+            }
+          },
+          "displayCategories": {
+            "primary": {
+              "value": "LIGHT"
+            }
+          },
+          "dmsIdentifier": {
+            "deviceType": "A2OV3VSK41OD7X",
+            "dsn": "G000TEST00000006"
+          },
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "power",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "turnOn"
+                },
+                {
+                  "name": "turnOff"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "powerState",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Power",
+                  "powerStateValue": "ON"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "brightness",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "setBrightness"
+                },
+                {
+                  "name": "adjustBrightness"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "brightness",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Brightness",
+                  "brightnessStateValue": 80
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "color",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "setColor"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "color",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Color",
+                  "colorStateValue": {
+                    "hue": 240.0,
+                    "saturation": 1.0,
+                    "brightness": 0.8
+                  }
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "mode",
+              "instance": "1",
+              "operations": [
+                {
+                  "name": "setMode"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "mode",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Mode",
+                  "modeValue": {
+                    "value": "Rainbow.Mode"
+                  }
+                }
+              ],
+              "configuration": {
+                "modeOptions": [
+                  {
+                    "value": "Rainbow.Mode",
+                    "modeResources": {
+                      "friendlyName": {
+                        "value": {
+                          "text": "Rainbow"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "value": "Campfire.Mode",
+                    "modeResources": {
+                      "friendlyName": {
+                        "value": {
+                          "text": "Campfire"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "value": "Plain.Mode",
+                    "modeResources": null
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000104",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Desk Lamp"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Lamp Maker"
+            }
+          },
+          "model": {
+            "value": {
+              "text": "LM-1"
+            }
+          },
+          "displayCategories": {
+            "primary": {
+              "value": "LIGHT"
+            }
+          },
+          "dmsIdentifier": null,
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "power",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "turnOn"
+                },
+                {
+                  "name": "turnOff"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "powerState",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Power",
+                  "powerStateValue": "OFF"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "brightness",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "setBrightness"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "brightness",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Brightness",
+                  "brightnessStateValue": 40
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "colorTemperature",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "setColorTemperature"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "colorTemperatureInKelvin",
+                  "type": "RETRIEVABLE",
+                  "__typename": "ColorTemperature",
+                  "colorTemperatureInKelvinStateValue": 2700
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "color",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "setColor"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "color",
+                  "type": "ERROR",
+                  "__typename": "Color",
+                  "colorStateValue": null
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000105",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Coffee Plug"
+            }
+          },
+          "manufacturer": {
+            "value": {
+              "text": "Plug Maker"
+            }
+          },
+          "model": null,
+          "displayCategories": {
+            "primary": {
+              "value": "SMARTPLUG"
+            }
+          },
+          "dmsIdentifier": null,
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "power",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "turnOn"
+                },
+                {
+                  "name": "turnOff"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "powerState",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Power",
+                  "powerStateValue": "ON"
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000106",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Offline Plug"
+            }
+          },
+          "manufacturer": null,
+          "model": null,
+          "displayCategories": {
+            "primary": {
+              "value": "SMARTPLUG"
+            }
+          },
+          "dmsIdentifier": null,
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "UNREACHABLE"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "power",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "turnOn"
+                },
+                {
+                  "name": "turnOff"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "powerState",
+                  "type": "ERROR",
+                  "__typename": "Power",
+                  "powerStateValue": null
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000107",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Front Door"
+            }
+          },
+          "manufacturer": null,
+          "model": null,
+          "displayCategories": {
+            "primary": {
+              "value": "CONTACT_SENSOR"
+            }
+          },
+          "dmsIdentifier": null,
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "contactSensor",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "detectionState",
+                  "type": "RETRIEVABLE",
+                  "__typename": "DetectionState",
+                  "detectionStateValue": "DETECTED"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "inventory",
+              "instance": "Sensor.Battery",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "level",
+                  "type": "RETRIEVABLE",
+                  "__typename": "InventoryLevel",
+                  "inventoryLevelValue": {
+                    "type": "PERCENTAGE",
+                    "value": 71,
+                    "unit": null
+                  }
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000108",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Hall Motion"
+            }
+          },
+          "manufacturer": null,
+          "model": null,
+          "displayCategories": {
+            "primary": {
+              "value": "MOTION_SENSOR"
+            }
+          },
+          "dmsIdentifier": null,
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "motionSensor",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "detectionState",
+                  "type": "RETRIEVABLE",
+                  "__typename": "DetectionState",
+                  "detectionStateValue": "NOT_DETECTED"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "detectionEvents",
+              "instance": null,
+              "operations": null,
+              "properties": null,
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000109",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Back Door Lock"
+            }
+          },
+          "manufacturer": null,
+          "model": null,
+          "displayCategories": {
+            "primary": {
+              "value": "SMARTLOCK"
+            }
+          },
+          "dmsIdentifier": null,
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "lock",
+              "instance": null,
+              "operations": [
+                {
+                  "name": "lock"
+                },
+                {
+                  "name": "unlock"
+                }
+              ],
+              "properties": [
+                {
+                  "name": "lockState",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Lock",
+                  "lockState": "LOCKED"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "endpointHealth",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "battery",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Battery",
+                  "batteryValue": {
+                    "levelPercentage": 90
+                  }
+                },
+                {
+                  "name": "connectivity",
+                  "type": null,
+                  "__typename": "UnknownFeatureProperty"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "inventory",
+              "instance": "Battery.Level",
+              "operations": null,
+              "properties": [
+                {
+                  "name": "level",
+                  "type": "ERROR",
+                  "__typename": "InventoryLevel",
+                  "inventoryLevelValue": null
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000110",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Fridge Thermometer"
+            }
+          },
+          "manufacturer": null,
+          "model": null,
+          "displayCategories": {
+            "primary": {
+              "value": "TEMPERATURE_SENSOR"
+            }
+          },
+          "dmsIdentifier": null,
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            },
+            {
+              "name": "temperatureSensor",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "temperature",
+                  "type": "ERROR",
+                  "__typename": "TemperatureSensor",
+                  "temp": null
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": "amzn1.alexa.endpoint.00000000-0000-0000-0000-000000000111",
+          "friendlyNameObject": {
+            "value": {
+              "text": "Good Night"
+            }
+          },
+          "manufacturer": null,
+          "model": null,
+          "displayCategories": {
+            "primary": {
+              "value": "ACTIVITY_TRIGGER"
+            }
+          },
+          "dmsIdentifier": null,
+          "connections": [],
+          "settings": null,
+          "features": [
+            {
+              "name": "connectivity",
+              "instance": null,
+              "operations": null,
+              "properties": [
+                {
+                  "name": "reachability",
+                  "type": "RETRIEVABLE",
+                  "__typename": "Reachability",
+                  "reachabilityStatusValue": "OK"
+                }
+              ],
+              "configuration": null
+            }
+          ]
+        },
+        {
+          "endpointId": null,
+          "features": []
+        }
+      ]
+    }
+  }
+}

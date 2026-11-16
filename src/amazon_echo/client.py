@@ -23,12 +23,26 @@ from .auth import (
 )
 from .const import (
     APP_USER_AGENT,
+    COMMS_HOST,
+    DROP_IN_MODES,
+    GUARD_CAPABILITY,
+    GUARD_MODEL,
+    GUARD_SKILL_ID,
+    INFO_SKILLS,
     LIST_KINDS,
     MEDIA_COMMANDS,
     MUTATION_SET_ENDPOINT_FEATURES,
     NOTIFICATION_KINDS,
+    QUERY_APPLIANCES,
     QUERY_ENDPOINTS,
     USER_AGENT,
+)
+from .endpoints import (
+    build_endpoint,
+    dig as _dig,
+    format_mac,
+    parse_endpoint,
+    parse_features,
 )
 from .exceptions import (
     AmazonEchoAuthenticationError,
@@ -45,6 +59,8 @@ from .models import (
     BluetoothDevice,
     Device,
     EchoList,
+    Endpoint,
+    Guard,
     ListItem,
     MediaState,
     Notification,
@@ -60,6 +76,9 @@ _REAUTH_COOLDOWN = 60.0  # a 401/403 this soon after a cookie exchange is final
 _TOKEN_MARGIN = 60.0
 _HISTORY_CSRF_TTL = 12 * 3600
 _HISTORY_PAGES = 5
+# One GraphQL answer serves the Alexa devices and the smart-home endpoints.
+_ENDPOINTS_TTL = 5.0
+_BACKGROUND_IMAGE_ID = "JqIFZhtBTx25wLGTJGdNGQ"  # the app's "personal photo" slot
 _CSRF_META = re.compile(
     r'<meta[^>]*name="csrf-token"[^>]*content="([^"]+)"', re.IGNORECASE
 )
@@ -69,20 +88,19 @@ _SKIPPED_UTTERANCES = frozenset(
 )
 _LIST_NAMES = {"SHOP": "Shopping", "TODO": "To-do"}  # the built-in lists are unnamed
 _WEEKDAYS = ("MO", "TU", "WE", "TH", "FR", "SA", "SU")
+# `recurringPattern` of an alarm → ISO weekdays (empty = every day).
+_PATTERN_DAYS: dict[str, tuple[int, ...]] = {
+    "P1D": (),
+    "XXXX-WD": (1, 2, 3, 4, 5),
+    "XXXX-WE": (6, 7),
+    **{f"XXXX-WXX-{day}": (day,) for day in range(1, 8)},
+}
 _RECURRENCE_PRESETS: dict[str, list[str]] = {
     "DAILY": [],
     "EVERYDAY": [],
     "WEEKDAYS": list(_WEEKDAYS[:5]),
     "WEEKENDS": list(_WEEKDAYS[5:]),
 }
-
-
-def format_mac(value: str | None) -> str | None:
-    """Return ``aa:bb:cc:dd:ee:ff`` for any 12-hex-digit MAC spelling."""
-    digits = re.sub(r"[^0-9a-fA-F]", "", value or "").lower()
-    if len(digits) != 12:
-        return None
-    return ":".join(digits[i : i + 2] for i in range(0, 12, 2))
 
 
 def _from_ms(value: Any) -> datetime | None:
@@ -102,15 +120,6 @@ def _local(when: datetime) -> datetime:
     datetime in the Echo's local time when it does not.
     """
     return when.astimezone().replace(tzinfo=None) if when.tzinfo else when
-
-
-def _dig(data: Any, *path: str) -> Any:
-    """Walk nested dicts, returning None as soon as a level is missing."""
-    for key in path:
-        if not isinstance(data, dict):
-            return None
-        data = data.get(key)
-    return data
 
 
 def parse_notification(item: dict[str, Any]) -> Notification:
@@ -176,46 +185,6 @@ def _parse_media(info: dict[str, Any]) -> MediaState:
     )
 
 
-def _parse_endpoint(endpoint: dict[str, Any]) -> dict[str, Any]:
-    """Flatten one GraphQL endpoint into the values the integration needs."""
-    state: dict[str, Any] = {
-        "endpoint_id": endpoint.get("endpointId"),
-        "model": _dig(endpoint, "model", "value", "text"),
-        "mac": None,
-        "temperature": None,
-        "volume": None,
-        "reachable": None,
-        "remote_battery": None,
-        "ambient_mode": None,
-        "dnd": _dig(endpoint, "settings", "doNotDisturb", "toggleValue"),
-    }
-    for connection in endpoint.get("connections") or []:
-        if connection.get("type") == "TCP_IP" and connection.get("macAddress"):
-            state["mac"] = format_mac(connection["macAddress"])
-    for feature in endpoint.get("features") or []:
-        for prop in feature.get("properties") or []:
-            kind = prop.get("__typename")
-            if kind == "TemperatureSensor" and prop.get("temp"):
-                value, scale = prop["temp"].get("value"), prop["temp"].get("scale")
-                if value is not None and scale == "FAHRENHEIT":
-                    value = round((value - 32) / 1.8, 1)
-                state["temperature"] = value
-            elif kind == "Volume" and prop.get("vol"):
-                state["volume"] = prop["vol"].get("value")
-            elif kind == "Reachability" and prop.get("reachabilityStatusValue"):
-                state["reachable"] = prop["reachabilityStatusValue"] == "OK"
-            elif kind == "InventoryLevel" and feature.get("instance") == (
-                "Remote.Battery"
-            ):
-                state["remote_battery"] = _dig(prop, "inventoryLevelValue", "value")
-            elif kind == "ToggleState" and feature.get("instance") == (
-                "FTV.AmbientMode"
-            ):
-                value = prop.get("toggleStateValue")
-                state["ambient_mode"] = None if value is None else value == "ON"
-    return state
-
-
 def _replace_placeholders(node: Any, values: dict[str, str]) -> Any:
     """Return a copy of a routine node with the ``ALEXA_CURRENT_*`` markers set."""
     if isinstance(node, dict):
@@ -245,6 +214,36 @@ def _recurrence_rule(recurrence: str, when: datetime) -> dict[str, Any]:
     if not days:
         return {"freq": "DAILY", "byDay": [], "interval": 1}
     return {"freq": "WEEKLY", "byDay": days, "interval": 1}
+
+
+def _next_ring(alarm: dict[str, Any], now: datetime) -> str:
+    """Return the next ring of an alarm as local ``YYYY-MM-DDTHH:MM:SS``.
+
+    Raises:
+        ValueError: The alarm has no time, or an unknown repeat rule.
+
+    """
+    try:
+        hour, minute, second = (
+            int(part) for part in alarm["originalTime"][:8].split(":")
+        )
+    except (KeyError, TypeError, ValueError) as err:
+        raise ValueError("The alarm has no time") from err
+    # recurringPattern only names the first day when an alarm repeats on a few
+    days: tuple[int, ...] = tuple(
+        _WEEKDAYS.index(day) + 1
+        for day in _dig(alarm, "rRuleData", "byWeekDays") or ()
+        if day in _WEEKDAYS
+    )
+    pattern = alarm.get("recurringPattern")
+    if not days and pattern:
+        if pattern not in _PATTERN_DAYS:
+            raise ValueError(f"Unsupported repeat rule: {pattern!r}")
+        days = _PATTERN_DAYS[pattern]
+    when = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
+    while when <= now or (days and when.isoweekday() not in days):
+        when += timedelta(days=1)
+    return when.isoformat(timespec="seconds")
 
 
 class AmazonEchoClient:
@@ -280,6 +279,11 @@ class AmazonEchoClient:
         self._devices: dict[str, Device] = {}
         self._service_urls: dict[str, str] | None = None
         self._history_csrf: tuple[str, float] | None = None
+        self._endpoints_lock = asyncio.Lock()
+        self._endpoints_cache: tuple[float, list[dict[str, Any]]] | None = None
+        self._endpoint_types: dict[str, str | None] = {}
+        self._guard: Guard | None = None
+        self._guard_known = False
 
     # ------------------------------------------------------------------ core
 
@@ -429,13 +433,14 @@ class AmazonEchoClient:
         headers: dict[str, str] | None = None,
         app: bool = False,
         text: bool = False,
+        retry: bool = True,
     ) -> Any:
         url = (
             path
             if path.startswith("https://")
             else f"https://{host or self.host}{path}"
         )
-        delays = list(_RETRY_DELAYS)
+        delays = list(_RETRY_DELAYS) if retry else []
         reauthorized = False
         while True:
             seen = self._generation
@@ -558,15 +563,37 @@ class AmazonEchoClient:
         assert self.credentials.customer_id is not None  # noqa: S101
         return self.credentials.customer_id, self._locale or "en-US"
 
+    async def _raw_endpoints(self) -> list[dict[str, Any]]:
+        """Return every GraphQL endpoint of the account.
+
+        ponytail: the (large) answer is kept for 5 s so that the device states
+        and the smart-home endpoints of one poll share a request; a feature
+        call drops it.
+        """
+        async with self._endpoints_lock:
+            cached = self._endpoints_cache
+            if cached is not None and cached[0] > time.monotonic():
+                return cached[1]
+            data = await self._graphql(QUERY_ENDPOINTS)
+            endpoints = [
+                endpoint
+                for endpoint in _dig(data, "listEndpoints", "endpoints") or []
+                if endpoint.get("endpointId")
+            ]
+            self._endpoint_types = {
+                endpoint["endpointId"]: _dig(endpoint, "dmsIdentifier", "deviceType")
+                for endpoint in endpoints
+            }
+            self._endpoints_cache = (time.monotonic() + _ENDPOINTS_TTL, endpoints)
+            return endpoints
+
     async def _endpoints(self) -> dict[str, dict[str, Any]]:
         """Return the GraphQL state of every Alexa-enabled endpoint by serial."""
-        data = await self._graphql(QUERY_ENDPOINTS)
-        result: dict[str, dict[str, Any]] = {}
-        for endpoint in _dig(data, "listEndpoints", "endpoints") or []:
-            serial = _dig(endpoint, "dmsIdentifier", "dsn")
-            if serial:
-                result[serial] = _parse_endpoint(endpoint)
-        return result
+        return {
+            serial: parse_endpoint(endpoint)
+            for endpoint in await self._raw_endpoints()
+            if (serial := _dig(endpoint, "dmsIdentifier", "dsn"))
+        }
 
     async def get_devices(self) -> list[Device]:
         """Return every Alexa device, app and speaker group of the account.
@@ -743,9 +770,42 @@ class AmazonEchoClient:
 
         Each value has ``temperature`` (°C), ``volume``, ``reachable``,
         ``remote_battery``, ``ambient_mode``, ``mac``, ``dnd``, ``model`` and
-        ``endpoint_id``; values the device does not report are None.
+        ``endpoint_id``; values the device does not report are None. A device
+        with more sensors also has ``illuminance``, ``motion``, ``humidity``
+        and the air-quality keys of :func:`amazon_echo.endpoints.parse_features`.
         """
         return await self._endpoints()
+
+    async def get_smart_home_endpoints(self) -> list[Endpoint]:
+        """Return the smart-home devices linked to the account.
+
+        That is every endpoint that is not an Alexa voice device: lamps,
+        plugs, sensors and locks of other brands, plus Amazon hardware without
+        a microphone (Echo Glow, Air Quality Monitor). Shares its request with
+        :meth:`get_endpoint_states` when both are called within 5 s.
+        """
+        return [
+            build_endpoint(endpoint)
+            for endpoint in await self._raw_endpoints()
+            if _dig(endpoint, "displayCategories", "primary", "value")
+            != "ALEXA_VOICE_ENABLED"
+        ]
+
+    def parse_endpoint_update(
+        self, payload: dict[str, Any]
+    ) -> tuple[str, dict[str, Any]] | None:
+        """Decode a smart-home push event into (endpoint id, changed values).
+
+        ``payload`` is the one of a ``PushEvent`` whose command is
+        ``EventBus:AlexaMobile::FDAL``; None when it is something else.
+        """
+        endpoint_id = _dig(payload, "entity", "id")
+        features = _dig(payload, "data", "features")
+        if not isinstance(endpoint_id, str) or not isinstance(features, list):
+            return None
+        return endpoint_id, parse_features(
+            features, device_type=self._endpoint_types.get(endpoint_id)
+        )
 
     # ------------------------------------------------- per-device settings
 
@@ -863,7 +923,62 @@ class AmazonEchoClient:
         sound: str | None = _dig(data, "defaultNotificationSound", "id")
         return sound
 
+    def _comms_path(self, device: Device) -> str:
+        # "devicesTypes" is Amazon's spelling
+        return (
+            f"/devicesTypes/{device.device_type}/deviceId/{device.serial}/preferences"
+        )
+
+    async def get_communication_preferences(self, device: Device) -> dict[str, Any]:
+        """Return the communication preferences of ``device``.
+
+        Keys, each only when Amazon allows the preference on the device:
+        ``communications`` (bool), ``announcements`` (bool) and ``drop_in``
+        (``all``, ``home`` or ``off``). One call per device, not retried.
+        """
+        data = await self._request(
+            "GET",
+            self._comms_path(device)
+            + "?devicePreferences=communications&devicePreferences=dropin"
+            "&devicePreferences=announcements",
+            host=COMMS_HOST.format(domain=self.credentials.domain),
+            app=True,
+            retry=False,
+        )
+        result: dict[str, Any] = {}
+        for item in (data or {}).get("devicePermissionsPreferences") or []:
+            name, state = item.get("devicePreference"), item.get("state")
+            if item.get("allowed") is not True or not isinstance(state, str):
+                continue
+            if name == "dropin":
+                result["drop_in"] = state.lower()
+            elif name in ("communications", "announcements"):
+                result[name] = state == "ON"
+        return result
+
+    async def get_kids_mode(self, device: Device) -> bool:
+        """Return whether ``device`` is in Amazon Kids mode."""
+        data = await self._request(
+            "GET", "/api/device/op-mode", params=self._query(device)
+        )
+        return bool((data or {}).get("isChildDirectedDevice"))
+
     # ------------------------------------------------- account preferences
+
+    async def get_device_preferences(self) -> dict[str, dict[str, Any]]:
+        """Return ``locale``, ``time_zone`` and ``temperature_scale`` by serial."""
+        data = await self._request(
+            "GET", "/api/device-preferences", params={"cached": "true"}
+        )
+        return {
+            item["deviceSerialNumber"]: {
+                "locale": item.get("locale"),
+                "time_zone": item.get("timeZoneId"),
+                "temperature_scale": item.get("temperatureScale"),
+            }
+            for item in (data or {}).get("devicePreferences") or []
+            if item.get("deviceSerialNumber")
+        }
 
     async def get_whisper_mode(self) -> bool:
         """Return whether Alexa whispers back when whispered to."""
@@ -1030,6 +1145,42 @@ class AmazonEchoClient:
             f"/api/bluetooth/disconnect-sink/{device.device_type}/{device.serial}",
         )
 
+    async def _set_comms(self, device: Device, preference: str, state: str) -> None:
+        await self._request(
+            "PATCH",
+            f"{self._comms_path(device)}/{preference}",
+            host=COMMS_HOST.format(domain=self.credentials.domain),
+            json={"state": state},
+            app=True,
+        )
+
+    async def set_communications(self, device: Device, enabled: bool) -> None:
+        """Allow or block calls and messages on ``device``."""
+        await self._set_comms(device, "communications", "ON" if enabled else "OFF")
+
+    async def set_announcements(self, device: Device, enabled: bool) -> None:
+        """Allow or block announcements on ``device``."""
+        await self._set_comms(device, "announcements", "ON" if enabled else "OFF")
+
+    async def set_drop_in(self, device: Device, mode: str) -> None:
+        """Set who may drop in on ``device``: ``all``, ``home`` or ``off``."""
+        if mode not in DROP_IN_MODES:
+            raise ValueError("mode must be all, home or off")
+        await self._set_comms(device, "dropin", DROP_IN_MODES[mode])
+
+    async def set_background_image(self, device: Device, url: str) -> None:
+        """Show the image at ``url`` (https) as the background of an Echo Show."""
+        await self._request(
+            "POST",
+            "/api/background-image",
+            json={
+                **self._query(device),
+                "backgroundImageID": _BACKGROUND_IMAGE_ID,
+                "backgroundImageType": "PERSONAL_PHOTOS",
+                "backgroundImageURL": url,
+            },
+        )
+
     async def reboot(self, device: Device) -> None:
         """Restart ``device``."""
         await self._request(
@@ -1145,9 +1296,20 @@ class AmazonEchoClient:
         return list(result.values())
 
     async def announce(
-        self, devices: list[Device], text: str, *, title: str | None = None
+        self,
+        devices: list[Device],
+        text: str,
+        *,
+        title: str | None = None,
+        method: str = "all",
     ) -> None:
-        """Announce ``text`` (chime + speech + on-screen card) on ``devices``."""
+        """Announce ``text`` (chime + speech + on-screen card) on ``devices``.
+
+        ``method`` is ``all``, ``speak`` (nothing on screen) or ``show``
+        (nothing spoken).
+        """
+        if method not in ("all", "speak", "show"):
+            raise ValueError("method must be all, speak or show")
         targets = await self._members(devices)
         if not targets:
             raise ValueError("No device to announce on")
@@ -1160,8 +1322,13 @@ class AmazonEchoClient:
                 content=[
                     {
                         "locale": locale,
-                        "display": {"title": title or "Home Assistant", "body": text},
-                        "speak": {"type": "text", "value": text},
+                        "display": {"title": "", "body": ""}
+                        if method == "speak"
+                        else {"title": title or "Home Assistant", "body": text},
+                        "speak": {
+                            "type": "text",
+                            "value": "" if method == "show" else text,
+                        },
                     }
                 ],
                 target={
@@ -1226,6 +1393,67 @@ class AmazonEchoClient:
             )
         )
 
+    async def send_sequence(
+        self, device: Device, kind: str, payload: dict[str, Any] | None = None
+    ) -> None:
+        """Run any behavior node type (``Alexa.Weather.Play``…) on ``device``."""
+        await self._run(await self._node(device, kind, **(payload or {})))
+
+    async def info_skill(self, device: Device, skill: str) -> None:
+        """Make ``device`` tell something: a key of ``INFO_SKILLS``.
+
+        ``weather``, ``traffic``, ``flash_briefing``, ``good_morning``,
+        ``fun_fact``, ``joke``, ``tell_story``, ``calendar_today``…
+        """
+        if skill not in INFO_SKILLS:
+            raise ValueError(f"Unknown info skill: {skill}")
+        await self.send_sequence(device, INFO_SKILLS[skill])
+
+    async def send_mobile_push(
+        self, message: str, *, title: str | None = None, device: Device | None = None
+    ) -> None:
+        """Send a notification to the Alexa app on the account's phones.
+
+        ``device`` only names the sender in the request; the notification
+        always goes to the app.
+        """
+        customer_id, locale = await self._customer()
+        payload: dict[str, Any] = {
+            "customerId": customer_id,
+            "notificationMessage": message,
+            "alexaUrl": "#v2/behaviors",
+            "title": title or "Home Assistant",
+            "skillId": "amzn1.ask.1p.routines.messaging",
+        }
+        if device is not None:
+            payload = {**self._query(device), "locale": locale, **payload}
+        await self._run(
+            {
+                "@type": f"{_NODE}OpaquePayloadOperationNode",
+                "type": "Alexa.Notifications.SendMobilePush",
+                "operationPayload": payload,
+            }
+        )
+
+    async def send_drop_in_notification(
+        self, message: str, *, title: str | None = None
+    ) -> None:
+        """Send an Alexa app notification that opens the Drop In dialog."""
+        customer_id, _ = await self._customer()
+        await self._run(
+            {
+                "@type": f"{_NODE}OpaquePayloadOperationNode",
+                "type": "Alexa.Notifications.DropIn",
+                "skillId": "amzn1.ask.1p.action.dropin",
+                "operationPayload": {
+                    "customerId": customer_id,
+                    "notificationMessage": message,
+                    "alexaUrl": "#v2/comms/conversation-list?showDropInDialog=true",
+                    "title": title or "Home Assistant",
+                },
+            }
+        )
+
     async def run_routine(self, routine: Routine, device: Device | None = None) -> None:
         """Run a routine.
 
@@ -1271,7 +1499,9 @@ class AmazonEchoClient:
             raise AmazonEchoResponseError(200, f"The new {kind} did not show up")
         return max(candidates, key=lambda item: item.raw.get("createdDate") or 0)
 
-    async def _alerts(self, method: str, path: str, body: dict[str, Any]) -> Any:
+    async def _alerts(
+        self, method: str, path: str, body: dict[str, Any] | None = None
+    ) -> Any:
         """Call the app's alerts API, which takes the raw access token."""
         url = (await self.get_service_urls()).get("alexaApiUrl")
         if not url:
@@ -1381,6 +1611,44 @@ class AmazonEchoClient:
             body["timerLabel"] = label
         await self._alerts("POST", "timers", body)
         return await self._find_new(device, "timer", known)
+
+    @staticmethod
+    def _alarm_index(alarm: Notification) -> str:
+        index = alarm.raw.get("notificationIndex")
+        if alarm.kind not in ("alarm", "music_alarm") or not index:
+            raise AmazonEchoNotSupportedError("Only alarms can be switched")
+        return quote(str(index), safe="")
+
+    async def enable_alarm(self, alarm: Notification) -> None:
+        """Turn an alarm on; it rings at its next occurrence.
+
+        The next ring is computed in the system time zone, which Amazon reads
+        as the Echo's own (see :meth:`create_alarm`).
+
+        Raises:
+            AmazonEchoNotSupportedError: Not an alarm.
+            ValueError: The alarm has no time or an unknown repeat rule.
+
+        """
+        body: dict[str, Any] = {
+            "trigger": {"scheduledTime": _next_ring(alarm.raw, datetime.now())},  # noqa: DTZ005
+            "extensions": [],
+        }
+        if music := alarm.raw.get("musicAlarmId"):
+            body["assets"] = [{"type": "TONE", "assetId": f"MUSIC-{music}"}]
+        elif alarm.sound:
+            body["assets"] = [{"type": "TONE", "assetId": alarm.sound}]
+        await self._alerts("PUT", f"alarms/{self._alarm_index(alarm)}/activate", body)
+
+    async def disable_alarm(self, alarm: Notification) -> None:
+        """Turn an alarm off without deleting it."""
+        await self._alerts("PUT", f"alarms/{self._alarm_index(alarm)}/cancel")
+
+    async def skip_next_alarm(self, alarm: Notification) -> None:
+        """Skip the next occurrence of a repeating alarm."""
+        await self._alerts(
+            "PUT", f"alarms/{self._alarm_index(alarm)}/nextOccurrence/cancel"
+        )
 
     async def delete_notification(self, notification: Notification) -> None:
         """Delete an alarm, timer or reminder."""
@@ -1578,6 +1846,7 @@ class AmazonEchoClient:
             control["instance"] = instance
         if payload is not None:
             control["payload"] = payload
+        self._endpoints_cache = None  # the state is about to change
         data = await self._graphql(
             MUTATION_SET_ENDPOINT_FEATURES,
             {"input": {"featureControlRequests": [control]}},
@@ -1590,6 +1859,98 @@ class AmazonEchoClient:
             )
         if not result.get("featureControlResponses"):
             raise AmazonEchoResponseError(200, "No response to the feature operation")
+
+    # ----------------------------------------------------------- Alexa Guard
+
+    async def get_guard(self) -> Guard | None:
+        """Return the Alexa Guard panel with its state, None without Guard.
+
+        ponytail: the panel is looked up once per client; an account that
+        gets Guard later needs a new client (a reload of the integration).
+        """
+        if not self._guard_known:
+            data = await self._graphql(QUERY_APPLIANCES)
+            self._guard = next(
+                (
+                    Guard(
+                        entity_id=appliance["entityId"],
+                        appliance_id=appliance["applianceId"],
+                    )
+                    for item in _dig(data, "endpoints", "items") or []
+                    if (appliance := item.get("legacyAppliance") or {}).get("modelName")
+                    == GUARD_MODEL
+                    and appliance.get("entityId")
+                    and appliance.get("applianceId")
+                ),
+                None,
+            )
+            self._guard_known = True
+        guard = self._guard
+        if guard is None:
+            return None
+        data = await self._request(
+            "POST",
+            "/api/phoenix/state",
+            json={
+                "stateRequests": [{"entityId": guard.entity_id, "entityType": "ENTITY"}]
+            },
+        )
+        guard.state = None
+        for device_state in (data or {}).get("deviceStates") or []:
+            for raw in device_state.get("capabilityStates") or []:
+                try:
+                    capability = jsonlib.loads(raw)
+                except TypeError, ValueError:
+                    continue
+                if (
+                    capability.get("namespace") == "Alexa.SecurityPanelController"
+                    and capability.get("name") == "armState"
+                ):
+                    guard.state = capability.get("value")
+        return guard
+
+    async def set_guard(
+        self, guard: Guard, armed: bool, device: Device | None = None
+    ) -> None:
+        """Arm Guard (away mode) or disarm it (home mode).
+
+        Args:
+            guard: The panel from :meth:`get_guard`.
+            armed: True for away, False for home.
+            device: An Echo with Guard (capability ``GUARD_EARCON``) to send
+                the command through, as the Alexa app does. Without one the
+                smart-home state API is used.
+
+        """
+        if device is not None and device.supports(GUARD_CAPABILITY):
+            parts = guard.appliance_id.split("_")
+            await self._run(
+                await self._node(
+                    device,
+                    "controlGuardState",
+                    target=parts[2] if len(parts) > 2 else guard.appliance_id,
+                    operationId="controlGuardState",
+                    state="AWAY" if armed else "HOME",
+                    skillId=GUARD_SKILL_ID,
+                )
+            )
+            return
+        await self._request(
+            "PUT",
+            "/api/phoenix/state",
+            json={
+                "controlRequests": [
+                    {
+                        "entityId": guard.entity_id,
+                        "entityType": "APPLIANCE",
+                        "parameters": {
+                            "action": "controlSecurityPanel",
+                            "armState": "ARMED_AWAY" if armed else "ARMED_STAY",
+                        },
+                    }
+                ]
+            },
+        )
 
 
 def _parse_voice_record(item: dict[str, Any]) -> VoiceRecord | None:
@@ -1624,4 +1985,5 @@ def _parse_voice_record(item: dict[str, Any]) -> VoiceRecord | None:
         response=" ".join(response) or None,
         intent=item.get("intent") if item.get("intent") != "Unknown" else None,
         person=person.get("personFirstName") if isinstance(person, dict) else None,
+        person_type=person.get("personType") if isinstance(person, dict) else None,
     )

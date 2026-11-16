@@ -152,6 +152,7 @@ class VoiceRecord:
     response: str | None = None
     intent: str | None = None
     person: str | None = None
+    person_type: str | None = None
 
 
 @dataclass(slots=True, kw_only=True)
@@ -163,3 +164,45 @@ class AuxPort:
     plugged: bool = False
     enabled: bool = False
     active: bool = False
+
+
+@dataclass(slots=True, kw_only=True)
+class Endpoint:
+    """A smart-home device linked to the account (lamp, plug, sensor, lock…).
+
+    ``state`` holds the values of ``parse_features``; ``operations`` the
+    ``feature.operation`` pairs the endpoint accepts (``power.turnOn``).
+    """
+
+    id: str
+    name: str
+    category: str
+    manufacturer: str | None = None
+    model: str | None = None
+    serial: str | None = None
+    device_type: str | None = None
+    operations: frozenset[str] = frozenset()
+    state: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def is_amazon_device(self) -> bool:
+        """Return True for Amazon hardware (Echo Glow, Air Quality Monitor)."""
+        return self.serial is not None
+
+    def supports(self, feature: str, operation: str) -> bool:
+        """Return True when the endpoint accepts ``operation`` of ``feature``."""
+        return f"{feature}.{operation}" in self.operations
+
+
+@dataclass(slots=True, kw_only=True)
+class Guard:
+    """The Alexa Guard panel of the account."""
+
+    entity_id: str
+    appliance_id: str
+    state: str | None = None
+
+    @property
+    def armed(self) -> bool:
+        """Return True while Guard is in away mode."""
+        return self.state == "ARMED_AWAY"

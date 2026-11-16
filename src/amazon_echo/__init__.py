@@ -20,6 +20,8 @@ from .models import (
     BluetoothDevice,
     Device,
     EchoList,
+    Endpoint,
+    Guard,
     ListItem,
     MediaState,
     Notification,
@@ -28,7 +30,7 @@ from .models import (
 )
 from .push import PushClient, PushEvent
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 __all__ = [
     "Account",
@@ -46,6 +48,8 @@ __all__ = [
     "Credentials",
     "Device",
     "EchoList",
+    "Endpoint",
+    "Guard",
     "ListItem",
     "LocalInfo",
     "MediaState",
