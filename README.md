@@ -225,25 +225,27 @@ with mocked HTTP.
 | `create_timer` | verified live on an Echo Plus (pt-BR): a 12-minute timer, with and without a name, created and deleted. It is a typed request with the duration in words; English phrases are unit-tested only |
 | `set_wake_word` | ported |
 | `speak`, `announce`, `text_command`, `play_sound`, `play_music`, `info_skill`, `set_volume` | verified live on 2026-11-16 on an Echo Plus, through Home Assistant; the voice history shows each request and Alexa's answer |
-| `launch_skill`, `run_routine`, `stop`, `send_mobile_push`, `send_drop_in_notification` | ported, not replayed live (`send_mobile_push` was sent once but nobody checked the phone) |
+| `launch_skill`, `run_routine`, `stop`, `send_drop_in_notification` | ported, not replayed live |
+| `send_mobile_push` | sent live three times on 2026-11-16 (with and without the device fields, the second identical to Alexa Media Player's request); Amazon accepted all three but none reached the owner's phone. The phone's Alexa app registration lists no enabled notification types, so the cause is most likely on the phone; not proven |
 | `media_command`, `bluetooth_connect`, `bluetooth_disconnect`, `reboot` | ported |
 | `get_lists`, `get_list_items` | live read |
 | `add_list_item`, `update_list_item`, `delete_list_item` | ported |
 | `get_voice_history` | live read |
-| `call_feature` | ported |
+| `call_feature` | verified live on 2026-11-16 (see the two rows below) |
 | `get_endpoint_states` with the 0.2.0 query (illuminance, motion, humidity, air quality) | live read: a few hundred endpoints, no GraphQL error. Four devices advertise a light sensor and report no value; no device of the account reports motion, humidity or air quality, so those are unit tested only |
 | `get_smart_home_endpoints` | live read; power, brightness, colour, colour temperature, temperature, battery, contact, motion and lock states and the operation names all parsed |
 | `parse_endpoint_update` (smart-home push) | ported, not replayed live — no push stream on the test session |
-| Smart-home operations through `call_feature` (`turnOn`, `turnOff`, `setBrightness`, `setColor`, `setColorTemperature`, `setMode`, `lock`, `unlock`) | ported, not replayed live — they change a device's visible state. The request shapes of `power`, `brightness`, `lock` and `toggle` are the ones in the Alexa app; the payload of `setColorTemperature` is inferred |
+| Smart-home operations through `call_feature` | `turnOn`, `turnOff` and `setBrightness` verified live on 2026-11-16 on a Tuya lamp linked to Alexa (Amazon reported each new state; the lamp was put back as it was). `setColor`, `setColorTemperature`, `setMode`, `lock`, `unlock` are ported, not replayed live; the payload of `setColorTemperature` is inferred |
+| Fire TV ambient mode (`call_feature(…, "toggle", "turnOn"/"turnOff", instance="FTV.AmbientMode")`) | verified live on 2026-11-16 on a Fire TV Stick 4K Max: ADB showed the ambient app in front after `turnOn` and the previous app back after `turnOff`. Amazon lists the feature but never reports its state, so `get_endpoint_states` gives `ambient_mode_supported` with `ambient_mode` None |
 | `get_communication_preferences` | verified live on an Echo Plus. The service is flaky for this account: on 2026-11-16 it answered HTTP 503 to roughly nine requests out of ten, on both the `.com` and the marketplace host |
 | `set_communications`, `set_announcements`, `set_drop_in` | verified live on 2026-11-16 with no-op writes (the value just read) on an Echo Plus, read back unchanged; each took up to six attempts because of the 503s above |
 | `get_device_preferences`, `get_kids_mode`, `get_children`, `get_kids_profile` | live read |
 | `set_kids_mode` | ported, not replayed live — it changes how a device behaves |
 | `get_guard` | live for an account without Guard (the appliance list is read, no panel is found, None); the state read is ported — the test account has no Guard |
 | `set_guard` | ported, not replayed live — Guard was not touched |
-| `info_skill`, `send_sequence`, `send_mobile_push`, `send_drop_in_notification`, `announce(method=…)` | ported, not replayed live — audible, or visible on a phone |
+| `send_sequence`, `announce(method=…)` | ported, not replayed live |
 | `enable_alarm`, `disable_alarm`, `skip_next_alarm` | ported, not replayed live |
-| `set_background_image` | ported, not replayed live — it changes what an Echo Show displays |
+| `set_background_image` | **does not work any more**: tried live on 2026-11-16 on an Echo Show 5, Amazon answers 200 but the background stays Amazon's (`/api/background-image` still reads `CURATIONS_SEASONAL`); a PUT answers 404. The current Alexa app uploads the picture through a native module instead. Kept for accounts where it still works |
 | `PushClient` | handshake live (HTTP/2, 200, multipart boundary). the stream is then closed within ~1 s because the test session shares its registration with a running `alexa_media` (one stream per registration, see *Known limitations*); event parsing is unit tested only |
 | `probe_local`, `is_reachable` | live (two Echo models answer, a smart TV of another brand returns None) |
 

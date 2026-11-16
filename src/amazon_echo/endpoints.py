@@ -118,7 +118,8 @@ def parse_features(
 
     Keys: ``reachable``, ``temperature`` (°C), ``humidity`` (%),
     ``illuminance`` (lx), ``motion``, ``contact`` (True = open), ``battery``
-    (%), ``remote_battery`` (%), ``volume``, ``ambient_mode``, ``power``,
+    (%), ``remote_battery`` (%), ``volume``, ``ambient_mode`` (with
+    ``ambient_mode_supported``, set even when Amazon gives no state), ``power``,
     ``brightness`` (0-100), ``color`` (``hue`` 0-360, ``saturation`` and
     ``brightness`` 0-1), ``color_temperature`` (K), ``lock`` (``LOCKED`` /
     ``UNLOCKED`` / ``JAMMED``), ``mode`` with ``mode_instance`` and
@@ -134,6 +135,9 @@ def parse_features(
                 # two features can carry a battery: keep the one that reads
                 if value is not None or state.get(key) is None:
                     state[key] = value
+        if name == "toggle" and instance == AMBIENT_MODE_INSTANCE:
+            # Fire TV lists the feature but never reports its state (observed)
+            state["ambient_mode_supported"] = True
         options = dig(feature, "configuration", "modeOptions")
         if name == "mode" and options:
             state["mode_instance"] = instance

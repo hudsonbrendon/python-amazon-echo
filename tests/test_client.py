@@ -1706,3 +1706,18 @@ async def test_get_media_idle_without_sessions(client, session, office):
     session.add("GET", "/api/np/player", {"playerInfo": {}})
     session.add("GET", "/api/np/list-media-sessions", {"mediaSessionList": []})
     assert (await client.get_media(office)).state == "idle"
+
+
+def test_ambient_mode_supported_without_state():
+    from amazon_echo.endpoints import parse_features
+
+    state = parse_features(
+        [
+            {
+                "name": "toggle",
+                "instance": "FTV.AmbientMode",
+                "properties": [{"name": "toggleState", "type": "RETRIEVABLE"}],
+            }
+        ]
+    )
+    assert state == {"ambient_mode_supported": True}

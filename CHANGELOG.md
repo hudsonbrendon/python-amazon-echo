@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.4] - 2026-11-16
+
+### Added
+
+- `ambient_mode_supported` in the endpoint states: Fire TV lists ambient mode but
+  never reports its state, so callers can still offer the control. Ambient
+  mode, smart-home power and brightness were verified live.
+
+### Changed
+
+- README: `set_background_image` documented as not working on current
+  accounts (verified live); `send_mobile_push` delivery not confirmed.
+
 ## [0.3.3] - 2026-11-16
 
 ### Fixed
