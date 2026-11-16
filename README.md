@@ -220,6 +220,8 @@ with mocked HTTP.
 | `set_volume` (sequence pipeline) | no-op write |
 | `create_reminder`, `delete_notification` | live (a reminder 320 days ahead was created and deleted) |
 | `create_alarm` | ported |
+| `create_alarm(music=…)` (music alarm that reuses the station of an existing one) | ported from Alexa Media Player's request, never sent |
+| `play_music(timer=…)` (stop after that many seconds) | ported from Alexa Media Player's payload, never sent |
 | `create_timer` | ported — body inferred from field names in the app, never sent |
 | `set_wake_word` | ported |
 | `speak`, `announce`, `text_command`, `play_sound`, `play_music`, `launch_skill`, `run_routine`, `stop` | ported |
@@ -265,6 +267,9 @@ with mocked HTTP.
   pass a naive datetime in the Echo's local time if the host lives elsewhere.
 - **Alarms have no label** in Amazon's API; `create_alarm(label=…)` is accepted
   and ignored.
+- **Music alarms** can only reuse a station: `create_alarm(music=…)` takes a
+  music alarm that already exists on the account (create one in the Alexa app
+  first) and wakes with the same station. Amazon has no public search for one.
 - **`create_timer` is unverified** (see the table). Use
   `text_command(device, "set a timer for 5 minutes")` if it is rejected.
 - **Voice history** comes 10 records per call; at most 50 are fetched.

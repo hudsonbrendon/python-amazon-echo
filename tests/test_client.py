@@ -1109,6 +1109,9 @@ async def test_play_music(client, session, office):
         "sanitizedSearchPhrase": "jazz",
         "musicProviderId": "SPOTIFY",
     }
+    # a sleep timer: the music stops by itself
+    await client.play_music(office, "SPOTIFY", "jazz", timer=600)
+    assert node_of(session)["operationPayload"]["waitTimeInSeconds"] == 600
 
 
 async def test_launch_skill(client, session, office):
@@ -1258,6 +1261,36 @@ async def test_create_alarm_that_never_shows_up(client, session, office):
     with pytest.raises(AmazonEchoResponseError, match="did not show up"):
         await client.create_alarm(office, datetime(2027, 1, 15, 7, 0))
     assert "recurrence" not in session.sent("/v1/alerts/alarms")[0]["json"]["trigger"]
+
+
+async def test_create_music_alarm(client, session, office):
+    new = {
+        "id": "A18O6U1UQFJ0XK-G000TEST00000001-new-music",
+        "type": "Alarm",
+        "status": "ON",
+        "deviceSerialNumber": "G000TEST00000001",
+        "deviceType": "A18O6U1UQFJ0XK",
+        "musicAlarmId": "music-1",
+        "createdDate": 1_800_000_000_000,
+    }
+    session.add("GET", "/api/notifications", _listing(), _listing(), _listing(new))
+    session.add("GET", "/api/endpoints", {"alexaApiUrl": "https://api.amazonalexa.com"})
+    session.add("POST", "/v1/alerts/alarms", None)
+    alarm, _, _, music, _ = await client.get_notifications()
+    created = await client.create_alarm(
+        office, datetime(2027, 1, 15, 7, 0), music=music
+    )
+    assert session.sent("/v1/alerts/alarms")[0]["json"] == {
+        "trigger": {"scheduledTime": "2027-01-15T07:00:00"},
+        "extensions": [],
+        "endpointId": "G000TEST00000001@A18O6U1UQFJ0XK",
+        "assets": [{"type": "TONE", "assetId": "MUSIC-music-1"}],
+    }
+    assert (created.id, created.kind) == (new["id"], "music_alarm")
+    # an ordinary alarm has no station to reuse
+    with pytest.raises(AmazonEchoNotSupportedError, match="Not a music alarm"):
+        await client.create_alarm(office, datetime(2027, 1, 15, 7, 0), music=alarm)
+    assert len(session.sent("/v1/alerts/alarms")) == 1
 
 
 async def test_alerts_api_missing(client, session, office):

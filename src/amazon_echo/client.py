@@ -1425,16 +1425,32 @@ class AmazonEchoClient:
             )
         )
 
-    async def play_music(self, device: Device, provider_id: str, phrase: str) -> None:
-        """Play ``phrase`` from a music provider (see :meth:`get_music_providers`)."""
+    async def play_music(
+        self,
+        device: Device,
+        provider_id: str,
+        phrase: str,
+        *,
+        timer: int | None = None,
+    ) -> None:
+        """Play ``phrase`` from a music provider (see :meth:`get_music_providers`).
+
+        Args:
+            device: The device that plays.
+            provider_id: A key of :meth:`get_music_providers`.
+            phrase: What to search for.
+            timer: Stop after this many seconds (a sleep timer).
+
+        """
+        payload: dict[str, Any] = {
+            "searchPhrase": phrase,
+            "sanitizedSearchPhrase": phrase,
+            "musicProviderId": provider_id,
+        }
+        if timer:
+            payload["waitTimeInSeconds"] = timer
         await self._run(
-            await self._node(
-                device,
-                "Alexa.Music.PlaySearchPhrase",
-                searchPhrase=phrase,
-                sanitizedSearchPhrase=phrase,
-                musicProviderId=provider_id,
-            )
+            await self._node(device, "Alexa.Music.PlaySearchPhrase", **payload)
         )
 
     async def launch_skill(self, device: Device, skill_id: str) -> None:
@@ -1582,6 +1598,7 @@ class AmazonEchoClient:
         *,
         label: str | None = None,
         recurrence: str | None = None,
+        music: Notification | None = None,
     ) -> Notification:
         """Create an alarm.
 
@@ -1592,6 +1609,14 @@ class AmazonEchoClient:
             label: Not supported by Amazon for alarms; accepted and ignored.
             recurrence: ``DAILY``, ``WEEKDAYS``, ``WEEKENDS``, ``WEEKLY`` or a
                 day list such as ``MO,WE,FR``.
+            music: An existing music alarm of the account; the new alarm
+                wakes with the same station. Amazon has no public way to
+                search for a station, so one that was picked in the Alexa app
+                is reused (the ``MUSIC-<id>`` tone :meth:`enable_alarm` sends;
+                this request has not been replayed against Amazon).
+
+        Raises:
+            AmazonEchoNotSupportedError: ``music`` is not a music alarm.
 
         """
         del label
@@ -1599,17 +1624,20 @@ class AmazonEchoClient:
         trigger: dict[str, Any] = {"scheduledTime": local.isoformat(timespec="seconds")}
         if recurrence:
             trigger["recurrence"] = _recurrence_rule(recurrence, local)
+        body: dict[str, Any] = {
+            "trigger": trigger,
+            "extensions": [],
+            "endpointId": f"{device.serial}@{device.device_type}",
+        }
+        if music is not None:
+            if not (music_id := music.raw.get("musicAlarmId")):
+                raise AmazonEchoNotSupportedError("Not a music alarm")
+            body["assets"] = [{"type": "TONE", "assetId": f"MUSIC-{music_id}"}]
         known = {item.id for item in await self.get_notifications()}
-        await self._alerts(
-            "POST",
-            "alarms",
-            {
-                "trigger": trigger,
-                "extensions": [],
-                "endpointId": f"{device.serial}@{device.device_type}",
-            },
+        await self._alerts("POST", "alarms", body)
+        return await self._find_new(
+            device, "alarm" if music is None else "music_alarm", known
         )
-        return await self._find_new(device, "alarm", known)
 
     async def create_reminder(
         self, device: Device, when: datetime, label: str
