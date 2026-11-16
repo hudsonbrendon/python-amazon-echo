@@ -221,10 +221,11 @@ with mocked HTTP.
 | `create_reminder`, `delete_notification` | live (a reminder 320 days ahead was created and deleted) |
 | `create_alarm` | music alarm verified live on 2026-11-16 (`music=`, reusing a Spotify music alarm made by voice): created on an Echo Plus with the requested date and time, then deleted. A plain alarm is ported, not replayed live |
 | `create_alarm(music=…)` (music alarm that reuses the station of an existing one) | ported from Alexa Media Player's request, never sent |
-| `play_music(timer=…)` (stop after that many seconds) | ported from Alexa Media Player's payload, never sent |
+| `play_music(timer=…)` (stop after that many seconds) | verified live on 2026-11-16 (Spotify): the music stopped by itself, though not at the exact second (25 s asked → stopped at 26 s; 20 s asked → about 38 s) |
 | `create_timer` | verified live on an Echo Plus (pt-BR): a 12-minute timer, with and without a name, created and deleted. It is a typed request with the duration in words; English phrases are unit-tested only |
 | `set_wake_word` | ported |
-| `speak`, `announce`, `text_command`, `play_sound`, `play_music`, `launch_skill`, `run_routine`, `stop` | ported |
+| `speak`, `announce`, `text_command`, `play_sound`, `play_music`, `info_skill`, `set_volume` | verified live on 2026-11-16 on an Echo Plus, through Home Assistant; the voice history shows each request and Alexa's answer |
+| `launch_skill`, `run_routine`, `stop`, `send_mobile_push`, `send_drop_in_notification` | ported, not replayed live (`send_mobile_push` was sent once but nobody checked the phone) |
 | `media_command`, `bluetooth_connect`, `bluetooth_disconnect`, `reboot` | ported |
 | `get_lists`, `get_list_items` | live read |
 | `add_list_item`, `update_list_item`, `delete_list_item` | ported |
