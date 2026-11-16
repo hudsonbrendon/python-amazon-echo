@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-11-16
+
+### Added
+
+- Smart home: `get_smart_home_endpoints()` returns every device linked to the
+  account as an `Endpoint` (category, manufacturer, model, the operations it
+  accepts and its state: power, brightness, colour, colour temperature,
+  temperature, humidity, battery, contact, motion, lock, light shows).
+  `get_endpoint_states()` now also reports `illuminance`, `motion`, `humidity`
+  and, for the Amazon Air Quality Monitor, `pm25`, `pm10`, `voc`, `co`,
+  `air_quality` and `aqm_led`. Both share one GraphQL request when called
+  within 5 s. `parse_endpoint_update()` decodes the smart-home push event.
+- Communication preferences per device: `get_communication_preferences`,
+  `set_communications`, `set_announcements`, `set_drop_in`.
+- Alexa Guard: `get_guard`, `set_guard` and the `Guard` model.
+- Sequences: `info_skill` (17 "tell me…" skills, see `INFO_SKILLS`),
+  `send_sequence` for any node type, `send_mobile_push`,
+  `send_drop_in_notification`, and `announce(method="all" | "speak" | "show")`.
+- Alarms: `enable_alarm`, `disable_alarm`, `skip_next_alarm`.
+- `get_device_preferences` (locale, time zone, temperature scale by device),
+  `get_kids_mode`, `set_background_image`.
+- `VoiceRecord.person_type`.
+
+### Changed
+
+- A temperature of -280 (what Amazon reports while a sensor calibrates) is
+  returned as None.
+
 ## [0.1.1] - 2026-11-16
 
 ### Fixed

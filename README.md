@@ -28,9 +28,20 @@ on the local network. It is not affiliated with Amazon.
   volume, default alarm sound, ascending alarm, wake word, AUX direction, whisper
   mode, adaptive volume and any per-device setting key (speaking rate, time zone,
   captions, …).
-- **Actions.** Volume, stop, speak, announce, text command, sounds, music,
-  skills, routines, transport commands, Bluetooth, reboot.
-- **Alarms, timers and reminders.** List all, create and delete.
+- **Actions.** Volume, stop, speak, announce (spoken, shown or both), text
+  command, sounds, music, skills, routines, the "tell me…" info skills (weather,
+  traffic, flash briefing, a joke…), any other behavior node type, transport
+  commands, Bluetooth, reboot, Echo Show background image.
+- **Notifications to the Alexa app.** A mobile push, or one that opens Drop In.
+- **Communication preferences.** Calls and messages, announcements and Drop In
+  per device.
+- **Alarms, timers and reminders.** List all, create, delete; switch an alarm
+  on or off and skip its next ring.
+- **Smart home.** Every device linked to the account (lamps, plugs, sensors,
+  locks, Echo Glow, the Air Quality Monitor) with its state and the operations
+  it accepts; sensors of the Echos themselves (illuminance, motion, humidity);
+  state changes pushed by Amazon decoded into the same values.
+- **Alexa Guard.** Read the panel, arm (away) and disarm (home).
 - **Lists.** Shopping, to-do and custom lists with full item CRUD.
 - **Voice history.**
 - **Push.** One HTTP/2 stream delivers volume, playback, do-not-disturb,
@@ -97,6 +108,26 @@ await push.start()  # background task, reconnects with back-off 5·2ⁿ s (≤ 6
 await push.stop()
 ```
 
+Smart home:
+
+```python
+for endpoint in await client.get_smart_home_endpoints():
+    print(endpoint.name, endpoint.category, endpoint.state)
+
+lamp = next(e for e in await client.get_smart_home_endpoints() if e.category == "LIGHT")
+if lamp.supports("brightness", "setBrightness"):
+    await client.call_feature(
+        lamp.id, "brightness", "setBrightness", payload={"brightness": 40}
+    )
+```
+
+`endpoint.state` uses the keys documented in
+`amazon_echo.endpoints.parse_features` (`power`, `brightness`, `color`,
+`color_temperature`, `temperature`, `humidity`, `battery`, `contact`, `motion`,
+`lock`…); a key is there when the device has the feature, and is None while
+Amazon cannot read it. `get_endpoint_states()` and `get_smart_home_endpoints()`
+share one request when called within 5 seconds.
+
 LAN:
 
 ```python
@@ -160,8 +191,9 @@ Credentials are read from `~/.config/amazon-echo/credentials.json`
 
 ## Verification
 
-How each part was checked against a real amazon.com.br account on 2026-11-15. Everything is also covered by unit tests with mocked
-HTTP.
+How each part was checked against a real amazon.com.br account on 2026-11-15
+(the 0.2.0 additions on 2026-11-16). Everything is also covered by unit tests
+with mocked HTTP.
 
 - **live read** — called against Amazon through this library, answer parsed.
 - **no-op write** — the value just read was written back to one Echo Plus and
@@ -194,6 +226,18 @@ HTTP.
 | `add_list_item`, `update_list_item`, `delete_list_item` | ported |
 | `get_voice_history` | live read |
 | `call_feature` | ported |
+| `get_endpoint_states` with the 0.2.0 query (illuminance, motion, humidity, air quality) | live read: a few hundred endpoints, no GraphQL error. Four devices advertise a light sensor and report no value; no device of the account reports motion, humidity or air quality, so those are unit tested only |
+| `get_smart_home_endpoints` | live read; power, brightness, colour, colour temperature, temperature, battery, contact, motion and lock states and the operation names all parsed |
+| `parse_endpoint_update` (smart-home push) | ported, not replayed live — no push stream on the test session |
+| Smart-home operations through `call_feature` (`turnOn`, `turnOff`, `setBrightness`, `setColor`, `setColorTemperature`, `setMode`, `lock`, `unlock`) | ported, not replayed live — they change a device's visible state. The request shapes of `power`, `brightness`, `lock` and `toggle` are the ones in the Alexa app; the payload of `setColorTemperature` is inferred |
+| `get_communication_preferences` | ported. Called live on five devices: the service answers HTTP 503 for this account whatever the device, while `/accounts` on the same host answers 200 with the same cookies |
+| `set_communications`, `set_announcements`, `set_drop_in` | ported, not replayed live — there was no value to write back (see the line above) |
+| `get_device_preferences`, `get_kids_mode` | live read |
+| `get_guard` | live for an account without Guard (the appliance list is read, no panel is found, None); the state read is ported — the test account has no Guard |
+| `set_guard` | ported, not replayed live — Guard was not touched |
+| `info_skill`, `send_sequence`, `send_mobile_push`, `send_drop_in_notification`, `announce(method=…)` | ported, not replayed live — audible, or visible on a phone |
+| `enable_alarm`, `disable_alarm`, `skip_next_alarm` | ported, not replayed live |
+| `set_background_image` | ported, not replayed live — it changes what an Echo Show displays |
 | `PushClient` | handshake live (HTTP/2, 200, multipart boundary). the stream is then closed within ~1 s because the test session shares its registration with a running `alexa_media` (one stream per registration, see *Known limitations*); event parsing is unit tested only |
 | `probe_local`, `is_reachable` | live (two Echo models answer, a smart TV of another brand returns None) |
 
@@ -226,6 +270,20 @@ HTTP.
   sends `PUSH_NOTIFICATION_CHANGE`).
 - `devices-v2` no longer reports MAC addresses or battery levels for most
   devices; the MAC comes from GraphQL and is missing for apps and groups.
+- **Communication preferences** come from a service that fails for some
+  accounts (HTTP 503 on the test account). The call is not retried and raises
+  `AmazonEchoRateLimitError`; treat it as "not available for this device".
+- **Guard** is looked up once per client: an account that gets Guard later is
+  noticed by a new client. The free version of Guard was retired by Amazon in
+  most countries; the code follows `alexapy` and could not be run.
+- **Smart-home state** is what Amazon last heard from the device's own cloud.
+  A value Amazon cannot read is None, and `reachable` is False for a device its
+  cloud reports offline.
+- **Locks.** Amazon offers `unlock` only for some locks; check
+  `endpoint.supports("lock", "unlock")`.
+- **Deleting voice history is not implemented.** The only endpoint the existing
+  clients use for it, `/api/activities`, answers 404 since Amazon moved the
+  history to the privacy hub.
 - Amazon can change or remove any of this without notice.
 
 ## Development
