@@ -92,7 +92,7 @@ def on_event(event: PushEvent) -> None:
 
 
 push = PushClient(client, on_event, on_state=lambda up: print("push up:", up))
-await push.start()   # background task, reconnects with back-off 5·2ⁿ s (≤ 600 s)
+await push.start()  # background task, reconnects with back-off 5·2ⁿ s (≤ 600 s)
 ...
 await push.stop()
 ```
@@ -102,7 +102,7 @@ LAN:
 ```python
 from amazon_echo import is_reachable, probe_local
 
-info = await probe_local("192.168.1.50")   # None if it is not an Amazon device
+info = await probe_local("192.168.1.50")  # None if it is not an Amazon device
 print(info.name, info.model, info.groups, info.spotify_user)
 print(await is_reachable("192.168.1.50"))
 ```
@@ -113,8 +113,8 @@ print(await is_reachable("192.168.1.50"))
 from amazon_echo import build_authorize_url, register_device
 
 request = build_authorize_url(language="en-US")
-print(request.url)                      # 1. open it and log in to Amazon
-redirect = input("Paste the final URL: ")   # 2. see below
+print(request.url)  # 1. open it and log in to Amazon
+redirect = input("Paste the final URL: ")  # 2. see below
 credentials = await register_device(request, redirect)
 ```
 

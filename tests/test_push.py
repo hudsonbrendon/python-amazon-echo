@@ -339,3 +339,27 @@ async def test_push_creates_its_http_client(client, session, fast, monkeypatch):
     await push.stop()
     assert created[0]["http2"] is True
     assert push._http is None
+
+
+async def test_push_survives_unexpected_errors(client, session, fast):
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if len(calls) == 1:
+            raise RuntimeError("h2 state machine blew up")
+        return httpx.Response(
+            200,
+            headers={"content-type": CONTENT_TYPE},
+            content=DELIMITER + part(VOLUME),
+        )
+
+    client.credentials.source = "alexa_media"
+    session.add("GET", "/api/endpoints", {"bobDispatchUrl": "https://push.example.com"})
+    events = []
+    push = PushClient(client, events.append)
+    push._http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    await push.start()
+    await wait_for(lambda: events)
+    await push.stop()
+    assert len(calls) >= 2

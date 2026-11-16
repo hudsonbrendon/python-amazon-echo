@@ -203,7 +203,7 @@ class PushClient:
                 _LOGGER.debug("Push stream closed by Amazon")
             except AmazonEchoError as err:
                 _LOGGER.debug("Push stream failed: %s", err)
-            except (httpx.HTTPError, OSError) as err:
+            except Exception as err:  # noqa: BLE001 - the task must survive anything
                 _LOGGER.debug("Push connection lost: %r", err)
             finally:
                 self._set_connected(connected=False)
