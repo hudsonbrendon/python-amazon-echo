@@ -194,7 +194,7 @@ HTTP.
 | `add_list_item`, `update_list_item`, `delete_list_item` | ported |
 | `get_voice_history` | live read |
 | `call_feature` | ported |
-| `PushClient` | handshake live (HTTP/2, 200, multipart boundary). Amazon closed the stream after ~0.6 s because the test session shares its registration with a running `alexa_media`; event parsing is unit tested only |
+| `PushClient` | handshake live (HTTP/2, 200, multipart boundary). the stream is then closed within ~1 s because the test session shares its registration with a running `alexa_media` (one stream per registration, see *Known limitations*); event parsing is unit tested only |
 | `probe_local`, `is_reachable` | live (two Echo models answer, a smart TV of another brand returns None) |
 
 ## Known limitations
@@ -205,14 +205,14 @@ HTTP.
   "Local" in this library therefore means discovery, name/model/group lookup and
   liveness. Every command and every other piece of state goes through Amazon's
   cloud; push only removes the polling.
-- **Push with an imported `alexa_media` session.** While `alexa_media` was
-  running on the same registration, Amazon accepted our push stream and closed it
-  about 0.6 s later (HTTP/2 GOAWAY, no error) on every host tried. The likely
-  cause is one push stream per registration, with the two clients closing each
-  other's stream; this was not proven. `PushClient` backs off (up to 10 minutes),
-  so poll as a fallback, or log in with the browser flow to get a registration of
-  its own. `PushClient` also does not re-declare AVS capabilities for imported
-  sessions, to leave the shared registration untouched.
+- **Push with an imported `alexa_media` session.** Amazon keeps one push stream per
+  app registration and the newest connection wins. Verified on 2026-11-15 with
+  `alexa_media` debug logging on: opening our stream made `alexa_media` log
+  `HTTP2 Connection Closed`, it reconnected at once, and that closed ours about a
+  second later. So do not run `PushClient` on an imported session while
+  `alexa_media` is running; poll instead, or sign in with the browser flow to get
+  an own registration. `PushClient` does not re-declare AVS capabilities for
+  imported sessions.
 - **Alarm and reminder times** are read by Amazon in the Echo's own time zone and
   the API takes no zone. Aware datetimes are converted to the system time zone;
   pass a naive datetime in the Echo's local time if the host lives elsewhere.
