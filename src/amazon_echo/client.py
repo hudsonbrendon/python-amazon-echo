@@ -1509,33 +1509,46 @@ class AmazonEchoClient:
         if start.tzinfo is None:
             start = start.astimezone()
         host = f"www.{self.credentials.domain}"
-        records: list[VoiceRecord] = []
-        token: str | None = None
+        start_ms = int(start.timestamp() * 1000)
+        end_ms = int(now.timestamp() * 1000)
+        found: dict[str, VoiceRecord] = {}  # Amazon repeats records across calls
+        # Amazon serves 10 records per call, newest first. Its continuation
+        # token is answered with HTTP 400, so older pages are fetched by
+        # moving the end of the time window instead.
         for _ in range(_HISTORY_PAGES):
             data = await self._request(
                 "POST",
                 "/alexa-privacy/apd/rvh/customer-history-records-v2",
                 host=host,
                 params={
-                    "startTime": str(int(start.timestamp() * 1000)),
-                    "endTime": str(int(now.timestamp() * 1000)),
+                    "startTime": str(start_ms),
+                    "endTime": str(end_ms),
                     "recordType": "VOICE_HISTORY",
-                    "maxRecordSize": str(max(limit, 10)),
+                    "maxRecordSize": "10",
                 },
-                json={"previousRequestToken": token},
+                json={"previousRequestToken": None},
                 headers={
                     "anti-csrftoken-a2z": await self._privacy_csrf(),
                     "Referer": f"https://{host}/alexa-privacy/apd/rvh",
                 },
             )
-            for item in (data or {}).get("customerHistoryRecords") or []:
+            page = (data or {}).get("customerHistoryRecords") or []
+            for item in page:
                 record = _parse_voice_record(item)
                 if record is not None:
-                    records.append(record)
-            token = (data or {}).get("encodedRequestToken")
-            if not token or len(records) >= limit:
+                    found[record.id] = record
+            stamps = [
+                int(item["timestamp"])
+                for item in page
+                if isinstance(item.get("timestamp"), (int, float))
+            ]
+            more = (data or {}).get("encodedRequestToken")
+            if not more or not stamps or len(found) >= limit:
                 break
-        records.sort(key=lambda record: record.timestamp, reverse=True)
+            end_ms = min(stamps) - 1
+            if end_ms <= start_ms:
+                break
+        records = sorted(found.values(), key=lambda r: r.timestamp, reverse=True)
         return records[:limit]
 
     async def call_feature(

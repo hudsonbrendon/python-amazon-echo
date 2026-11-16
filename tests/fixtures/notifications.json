@@ -1,0 +1,44 @@
+{
+  "notifications": [
+    {
+      "id": "A18O6U1UQFJ0XK-G000TEST00000001-00000000-0000-0000-0000-00000000000a",
+      "type": "Alarm", "status": "ON", "alarmTime": 1800000000000, "triggerTime": 0,
+      "deviceSerialNumber": "G000TEST00000001", "deviceType": "A18O6U1UQFJ0XK",
+      "alarmLabel": null, "reminderLabel": null, "timerLabel": null,
+      "originalDate": "2027-01-15", "originalTime": "07:00:00.000",
+      "recurringPattern": "XXXX-WD", "remainingTime": 0, "musicAlarmId": null,
+      "createdDate": 1700000000000,
+      "sound": {"id": "system_alerts_melodic_01", "displayName": "Simple Alarm"}
+    },
+    {
+      "id": "A18O6U1UQFJ0XK-G000TEST00000001-00000000-0000-0000-0000-00000000000b",
+      "type": "Timer", "status": "PAUSED", "alarmTime": 0, "triggerTime": 1800000300000,
+      "deviceSerialNumber": "G000TEST00000001", "deviceType": "A18O6U1UQFJ0XK",
+      "alarmLabel": null, "reminderLabel": null, "timerLabel": "pasta",
+      "recurringPattern": null, "remainingTime": 300000, "musicAlarmId": null,
+      "createdDate": 1700000000001, "sound": null
+    },
+    {
+      "id": "A1RABVCI4QCIKC-G000TEST00000002-00000000-0000-0000-0000-00000000000c_REMINDER",
+      "type": "Reminder", "status": "OFF", "alarmTime": 0,
+      "deviceSerialNumber": "G000TEST00000002", "deviceType": "A1RABVCI4QCIKC",
+      "alarmLabel": null, "reminderLabel": "Take out the trash", "timerLabel": null,
+      "recurringPattern": "P1D", "remainingTime": 0, "musicAlarmId": null,
+      "createdDate": 1700000000002, "sound": {"id": "system_alerts_melodic_01"}
+    },
+    {
+      "id": "A18O6U1UQFJ0XK-G000TEST00000001-00000000-0000-0000-0000-00000000000d",
+      "type": "Alarm", "status": "ON", "alarmTime": 1800000600000,
+      "deviceSerialNumber": "G000TEST00000001", "deviceType": "A18O6U1UQFJ0XK",
+      "recurringPattern": "", "remainingTime": 0, "musicAlarmId": "music-1",
+      "createdDate": 1700000000003, "sound": null
+    },
+    {
+      "id": "A18O6U1UQFJ0XK-G000TEST00000001-00000000-0000-0000-0000-00000000000e",
+      "type": "Task", "status": "ON", "alarmTime": 0,
+      "deviceSerialNumber": "G000TEST00000001", "deviceType": "A18O6U1UQFJ0XK",
+      "reminderLabel": "Buy milk", "createdDate": 1700000000004
+    },
+    {"type": "Alarm", "status": "OFF"}
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "encodedRequestToken": null,
+  "customerHistoryRecords": [
+    {
+      "recordKey": "A0TESTCUSTOMER1#1800000002000#A18O6U1UQFJ0XK#G000TEST00000001",
+      "recordType": "VOICE_HISTORY", "timestamp": 1800000002000, "utteranceType": "GENERAL",
+      "intent": "TurnOffApplianceIntent",
+      "voiceHistoryRecordItems": [
+        {"recordItemType": "CUSTOMER_TRANSCRIPT", "transcriptText": "alexa"},
+        {"recordItemType": "ASR_REPLACEMENT_TEXT", "transcriptText": "turn off the lamp"},
+        {"recordItemType": "ALEXA_RESPONSE", "transcriptText": "OK"},
+        {"recordItemType": "PROFILE", "transcriptText": ""}
+      ],
+      "personsInfo": [{"personFirstName": "Tester"}]
+    },
+    {
+      "recordKey": "A0TESTCUSTOMER1#1800000001000#A1RABVCI4QCIKC#G000TEST00000002",
+      "recordType": "VOICE_HISTORY", "timestamp": 1800000001000, "utteranceType": "DEVICE_ARBITRATION",
+      "intent": "Unknown", "voiceHistoryRecordItems": [], "personsInfo": []
+    },
+    {
+      "recordKey": "A0TESTCUSTOMER1#1800000000500#A1RABVCI4QCIKC#G000TEST00000002",
+      "recordType": "VOICE_HISTORY", "timestamp": 1800000000500, "utteranceType": "FALSE_WAKE_WORD_1P",
+      "intent": "Unknown", "voiceHistoryRecordItems": [], "personsInfo": []
+    },
+    {
+      "recordKey": "A0TESTCUSTOMER1#1800000000000#A1RABVCI4QCIKC#G000TEST00000002",
+      "recordType": "VOICE_HISTORY", "timestamp": 1800000000000, "utteranceType": "GENERAL",
+      "intent": "Unknown",
+      "voiceHistoryRecordItems": [{"recordItemType": "CUSTOMER_TRANSCRIPT", "transcriptText": "what time is it"}],
+      "personsInfo": []
+    },
+    {"recordKey": "", "timestamp": 1800000000000},
+    {"recordKey": "broken", "timestamp": null}
+  ]
+}

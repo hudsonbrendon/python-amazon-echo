@@ -1,0 +1,11 @@
+{
+  "playerInfo": {
+    "infoText": {"title": "Test Song", "subText1": "Test Artist", "subText2": "Test Album"},
+    "mainArt": {"url": "https://example.com/art.jpg"},
+    "progress": {"allowScrubbing": true, "mediaLength": 215, "mediaProgress": 42, "showTiming": true},
+    "provider": {"providerName": "Amazon Music"},
+    "state": "PLAYING",
+    "transport": {"next": "ENABLED", "previous": "DISABLED", "playPause": "ENABLED", "shuffle": "SELECTED", "repeat": "HIDDEN"},
+    "volume": {"muted": false, "volume": 30}
+  }
+}

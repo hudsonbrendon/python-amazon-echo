@@ -104,7 +104,7 @@ fixture-parentheses = false
 mark-parentheses = false
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*" = ["ANN", "D", "E501", "PLR", "S", "SLF", "ARG", "INP", "FBT", "PT", "PLC0415", "ERA", "RUF012", "N806", "T201", "ASYNC", "EM", "TRY", "BLE", "C901", "PGH", "RUF"]
+"tests/**/*" = ["ANN", "D", "DTZ", "E501", "PLR", "S", "SLF", "ARG", "INP", "FBT", "PT", "PLC0415", "ERA", "RUF012", "N806", "T201", "ASYNC", "EM", "TRY", "BLE", "C901", "PGH", "RUF"]
 "examples/**" = ["T201", "INP001", "D100", "D103", "ASYNC240"]
 "src/amazon_echo/__main__.py" = ["T201", "ASYNC230", "ASYNC240", "ASYNC250"]
 
