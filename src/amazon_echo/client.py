@@ -178,6 +178,20 @@ def parse_notification(item: dict[str, Any]) -> Notification:
     )
 
 
+def _session_as_player(now: dict[str, Any]) -> dict[str, Any]:
+    """Shape a media session's ``nowPlayingData`` like ``playerInfo``.
+
+    The session names the state ``playerState`` and counts in milliseconds.
+    """
+    progress = dict(now.get("progress") or {})
+    for key in ("mediaLength", "mediaProgress"):
+        try:
+            progress[key] = float(progress[key]) / 1000
+        except KeyError, TypeError, ValueError:
+            progress.pop(key, None)
+    return {**now, "state": now.get("playerState"), "progress": progress}
+
+
 def _parse_media(info: dict[str, Any]) -> MediaState:
     """Build a :class:`MediaState` from the ``playerInfo`` of ``/api/np/player``."""
     transport = info.get("transport") or {}
@@ -792,7 +806,22 @@ class AmazonEchoClient:
             "/api/np/player",
             params={**self._query(device), "screenWidth": "2560"},
         )
-        return _parse_media((data or {}).get("playerInfo") or {})
+        info = (data or {}).get("playerInfo") or {}
+        if info.get("state"):
+            return _parse_media(info)
+        # Spotify and other external players leave /api/np/player empty and
+        # only show up as a media session (observed live).
+        try:
+            sessions = await self._request(
+                "GET", "/api/np/list-media-sessions", params=self._query(device)
+            )
+        except AmazonEchoResponseError:
+            return _parse_media(info)
+        for session in (sessions or {}).get("mediaSessionList") or []:
+            now = session.get("nowPlayingData") or {}
+            if now.get("playerState"):
+                return _parse_media(_session_as_player(now))
+        return _parse_media(info)
 
     async def get_endpoint_states(self) -> dict[str, dict[str, Any]]:
         """Return the GraphQL state of every Alexa endpoint by device serial.

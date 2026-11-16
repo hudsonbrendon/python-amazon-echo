@@ -211,7 +211,7 @@ with mocked HTTP.
 | `build_authorize_url`, `register_device` | ported (the authorize URL answers 302 as expected; no registration was made) |
 | `get_account`, `get_devices`, `get_routines`, `get_music_providers`, `get_service_urls` | live read |
 | `get_dnd`, `get_volumes`, `get_bluetooth`, `get_notifications`, `get_alarm_volumes`, `get_wake_words`, `get_ascending_alarms`, `get_endpoint_states` | live read |
-| `get_media` | live read (idle player only) |
+| `get_media` | verified live on 2026-11-16 with Spotify: playing, title, provider and position, then paused when the sleep timer ran out |
 | `get_wifi`, `get_equalizer`, `get_earcons`, `get_aux`, `get_setting`, `get_available_wake_words`, `get_alarm_sounds`, `get_default_alarm_sound` | live read |
 | `get_whisper_mode`, `get_adaptive_volume` | live read |
 | `set_whisper_mode`, `set_adaptive_volume` | no-op write during the reverse engineering (same request), not replayed by the library |

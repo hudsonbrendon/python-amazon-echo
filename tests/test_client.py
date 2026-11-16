@@ -662,6 +662,7 @@ async def test_get_media_idle(client, session, office):
     session.add(
         "GET", "/api/np/player", {"playerInfo": {"state": None, "volume": None}}
     )
+    session.add("GET", "/api/np/list-media-sessions", {"mediaSessionList": []})
     media = await client.get_media(office)
     assert media.state == "idle"
     assert media.title is None
@@ -1667,3 +1668,41 @@ def test_music_alarm_time_comes_from_the_original_fields():
     )
     assert repeating.when is not None
     assert repeating.when > datetime.now().astimezone()
+
+
+async def test_get_media_falls_back_to_media_sessions(client, session, office):
+    session.add("GET", "/api/np/player", {"playerInfo": {"state": None}})
+    session.add(
+        "GET",
+        "/api/np/list-media-sessions",
+        {
+            "mediaSessionList": [
+                {
+                    "nowPlayingData": {
+                        "playerState": "PLAYING",
+                        "infoText": {"title": "Song", "subText1": "Band"},
+                        "progress": {
+                            "mediaLength": 290110,
+                            "mediaProgress": 26420,
+                            "allowScrubbing": True,
+                        },
+                        "provider": {"providerName": "Spotify"},
+                        "transport": {"next": "ENABLED", "shuffle": "SELECTED"},
+                    }
+                }
+            ]
+        },
+    )
+    media = await client.get_media(office)
+    assert media.state == "playing"
+    assert (media.title, media.artist, media.provider) == ("Song", "Band", "Spotify")
+    assert media.duration == pytest.approx(290.11)
+    assert media.position == pytest.approx(26.42)
+    assert media.shuffle is True
+    assert media.can_next is True
+
+
+async def test_get_media_idle_without_sessions(client, session, office):
+    session.add("GET", "/api/np/player", {"playerInfo": {}})
+    session.add("GET", "/api/np/list-media-sessions", {"mediaSessionList": []})
+    assert (await client.get_media(office)).state == "idle"

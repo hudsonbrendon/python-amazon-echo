@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "python-amazon-echo"
-version = "0.3.2"
+version = "0.3.3"
 description = "Async Python client for Amazon Echo / Alexa devices: state, settings, media, notifications, lists, HTTP/2 push and LAN discovery"
 readme = "README.md"
 license = "MIT"
