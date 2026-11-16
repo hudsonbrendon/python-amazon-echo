@@ -234,8 +234,8 @@ with mocked HTTP.
 | `get_smart_home_endpoints` | live read; power, brightness, colour, colour temperature, temperature, battery, contact, motion and lock states and the operation names all parsed |
 | `parse_endpoint_update` (smart-home push) | ported, not replayed live — no push stream on the test session |
 | Smart-home operations through `call_feature` (`turnOn`, `turnOff`, `setBrightness`, `setColor`, `setColorTemperature`, `setMode`, `lock`, `unlock`) | ported, not replayed live — they change a device's visible state. The request shapes of `power`, `brightness`, `lock` and `toggle` are the ones in the Alexa app; the payload of `setColorTemperature` is inferred |
-| `get_communication_preferences` | ported. Called live on five devices: the service answers HTTP 503 for this account whatever the device, while `/accounts` on the same host answers 200 with the same cookies |
-| `set_communications`, `set_announcements`, `set_drop_in` | ported, not replayed live — there was no value to write back (see the line above) |
+| `get_communication_preferences` | verified live once (an Echo Plus answered `announcements: true, communications: true, drop_in: all`); otherwise the service answered HTTP 503 on about 95 % of 60+ spaced requests on 2026-11-16, on both the `.com` and the marketplace host, with cookies or a bearer token |
+| `set_communications`, `set_announcements`, `set_drop_in` | ported, not replayed live — the no-op write was attempted three times each and the service answered 503 every time |
 | `get_device_preferences`, `get_kids_mode`, `get_children`, `get_kids_profile` | live read |
 | `set_kids_mode` | ported, not replayed live — it changes how a device behaves |
 | `get_guard` | live for an account without Guard (the appliance list is read, no panel is found, None); the state read is ported — the test account has no Guard |
