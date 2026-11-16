@@ -35,6 +35,8 @@ on the local network. It is not affiliated with Amazon.
 - **Notifications to the Alexa app.** A mobile push, or one that opens Drop In.
 - **Communication preferences.** Calls and messages, announcements and Drop In
   per device.
+- **Amazon Kids.** The child profiles of the household, which one a device is
+  assigned to, and switching a device into or out of Kids mode.
 - **Alarms, timers and reminders.** List all, create, delete; switch an alarm
   on or off and skip its next ring.
 - **Smart home.** Every device linked to the account (lamps, plugs, sensors,
@@ -232,7 +234,8 @@ with mocked HTTP.
 | Smart-home operations through `call_feature` (`turnOn`, `turnOff`, `setBrightness`, `setColor`, `setColorTemperature`, `setMode`, `lock`, `unlock`) | ported, not replayed live — they change a device's visible state. The request shapes of `power`, `brightness`, `lock` and `toggle` are the ones in the Alexa app; the payload of `setColorTemperature` is inferred |
 | `get_communication_preferences` | ported. Called live on five devices: the service answers HTTP 503 for this account whatever the device, while `/accounts` on the same host answers 200 with the same cookies |
 | `set_communications`, `set_announcements`, `set_drop_in` | ported, not replayed live — there was no value to write back (see the line above) |
-| `get_device_preferences`, `get_kids_mode` | live read |
+| `get_device_preferences`, `get_kids_mode`, `get_children`, `get_kids_profile` | live read |
+| `set_kids_mode` | ported, not replayed live — it changes how a device behaves |
 | `get_guard` | live for an account without Guard (the appliance list is read, no panel is found, None); the state read is ported — the test account has no Guard |
 | `set_guard` | ported, not replayed live — Guard was not touched |
 | `info_skill`, `send_sequence`, `send_mobile_push`, `send_drop_in_notification`, `announce(method=…)` | ported, not replayed live — audible, or visible on a phone |

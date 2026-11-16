@@ -23,8 +23,10 @@ All notable changes to this project are documented here. The format follows
   `send_sequence` for any node type, `send_mobile_push`,
   `send_drop_in_notification`, and `announce(method="all" | "speak" | "show")`.
 - Alarms: `enable_alarm`, `disable_alarm`, `skip_next_alarm`.
+- Amazon Kids: `get_children`, `get_kids_mode`, `get_kids_profile`,
+  `set_kids_mode`.
 - `get_device_preferences` (locale, time zone, temperature scale by device),
-  `get_kids_mode`, `set_background_image`.
+  `set_background_image`.
 - `VoiceRecord.person_type`.
 
 ### Changed
