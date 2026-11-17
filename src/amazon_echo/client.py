@@ -76,7 +76,7 @@ _TIMEOUT = aiohttp.ClientTimeout(total=30)
 _RETRY_DELAYS = (1.0, 3.0)  # back-off before the 2nd and 3rd attempt on 429/503
 _TIMER_POLLS = 8
 _TIMER_POLL_SECONDS = 3.0
-_REAUTH_COOLDOWN = 60.0  # a 401/403 this soon after a cookie exchange is final
+_REAUTH_COOLDOWN = 60.0  # no second cookie exchange this soon after one
 _TOKEN_MARGIN = 60.0
 _HISTORY_CSRF_TTL = 12 * 3600
 _HISTORY_PAGES = 5
@@ -390,6 +390,18 @@ class AmazonEchoClient:
         assert creds.access_token is not None  # noqa: S101
         return creds.access_token
 
+    async def _session_dead(self) -> bool:
+        """Return True only when Amazon refuses the refresh token itself."""
+        try:
+            async with self._auth_lock:
+                await refresh_access_token(self.session, self.credentials)
+        except AmazonEchoAuthenticationError:
+            return True
+        except AmazonEchoError:
+            return False  # unreachable is not refused
+        self._notify()
+        return False
+
     async def _reauthorize(self, seen: int, *, bearer: bool) -> None:
         """Renew the cookies (and the bearer token) after a 401/403."""
         async with self._auth_lock:
@@ -513,13 +525,23 @@ class AmazonEchoClient:
                 ) from err
 
             if status in (401, 403) or signin:
-                if reauthorized:
+                if not reauthorized:
+                    reauthorized = True
+                    try:
+                        await self._reauthorize(seen, bearer=bearer)
+                        continue
+                    except AmazonEchoAuthenticationError:
+                        pass  # refused or just renewed: decided below
+                # A refusal of one route is not a dead session: cookies
+                # propagate with a delay after a login, and some pages ask
+                # for a fresh sign-in. Only a refused refresh token is final.
+                if await self._session_dead():
                     raise AmazonEchoAuthenticationError(
                         f"{method} {path} rejected (HTTP {status})"
                     )
-                await self._reauthorize(seen, bearer=bearer)
-                reauthorized = True
-                continue
+                raise AmazonEchoResponseError(
+                    status, f"{method} {path} refused, the session is valid"
+                )
             if status in (429, 503) or (status >= 400 and "Rate exceeded" in body):
                 if not delays:
                     raise AmazonEchoRateLimitError(

@@ -143,12 +143,29 @@ async def test_request_refreshes_cookies_once(client, session, updates):
     assert "session-id=999-888" in session.calls[-1]["headers"]["Cookie"]
 
 
-async def test_request_still_rejected_after_refresh(client, session):
+def _kinds(session) -> list[str]:
+    return [c["data"]["requested_token_type"] for c in session.sent("/auth/token")]
+
+
+async def test_route_refused_with_a_valid_session(client, session):
+    """One route refusing is not a dead session: no reauth for it."""
     session.add("GET", "/api/x", FakeResponse(403))
-    session.add("POST", "/auth/token", COOKIE_ANSWER)
-    with pytest.raises(AmazonEchoAuthenticationError):
+    session.add("POST", "/auth/token", COOKIE_ANSWER, TOKEN_ANSWER)
+    with pytest.raises(AmazonEchoResponseError, match="session is valid"):
         await client.request("GET", "/api/x")
-    assert len(session.sent("/auth/token")) == 1
+    assert _kinds(session) == ["auth_cookies", "access_token"]
+
+
+async def test_request_still_rejected_and_token_refused(client, session):
+    session.add("GET", "/api/x", FakeResponse(403))
+    session.add(
+        "POST",
+        "/auth/token",
+        COOKIE_ANSWER,
+        FakeResponse(400, {"error": "invalid_grant"}),
+    )
+    with pytest.raises(AmazonEchoAuthenticationError, match="rejected"):
+        await client.request("GET", "/api/x")
 
 
 async def test_request_refresh_token_rejected(client, session):
@@ -158,18 +175,20 @@ async def test_request_refresh_token_rejected(client, session):
         "/auth/token",
         FakeResponse(400, {"error": "invalid_grant", "error_description": "revoked"}),
     )
-    with pytest.raises(AmazonEchoAuthenticationError, match="invalid_grant"):
+    with pytest.raises(AmazonEchoAuthenticationError, match="rejected"):
         await client.request("GET", "/api/x")
 
 
 async def test_request_no_second_exchange_within_cooldown(client, session):
     session.add("GET", "/api/a", FakeResponse(401), {"ok": 1})
     session.add("GET", "/api/b", FakeResponse(403))
-    session.add("POST", "/auth/token", COOKIE_ANSWER)
+    session.add("POST", "/auth/token", COOKIE_ANSWER, TOKEN_ANSWER)
     await client.request("GET", "/api/a")
-    with pytest.raises(AmazonEchoAuthenticationError, match="right after"):
+    # Right after a login the new cookies can still be refused for a moment:
+    # that must not look like a dead session.
+    with pytest.raises(AmazonEchoResponseError, match="session is valid"):
         await client.request("GET", "/api/b")
-    assert len(session.sent("/auth/token")) == 1
+    assert _kinds(session) == ["auth_cookies", "access_token"]
 
 
 async def test_request_signin_redirect_is_auth_failure(client, session):

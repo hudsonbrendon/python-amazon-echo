@@ -137,8 +137,10 @@ from amazon_echo.routines import smart_home_action, speak_action
 
 routine = await client.create_routine(
     "Modo leitura",
-    [smart_home_action(lamp.id, {"type": "setBrightness", "brightness": 40}),
-     speak_action("Boa leitura")],
+    [
+        smart_home_action(lamp.id, {"type": "setBrightness", "brightness": 40}),
+        speak_action("Boa leitura"),
+    ],
     phrases=["modo leitura"],
 )
 # a lamp was replaced: move every action of the old one to the new one
